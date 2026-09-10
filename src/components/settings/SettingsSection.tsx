@@ -1,24 +1,39 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { useClub } from '@/context/ClubContext';
-import { ClubEmblem } from '@/components/ui/ClubLogo';
 import { formatLKR } from '@/utils/helpers';
 import {
-  Settings,
   DollarSign,
   Shield,
   RotateCcw,
   CheckCircle2,
-  Lock,
   Building,
-  Mail,
-  User,
   Trash2,
+  Download,
+  Upload,
+  Database,
+  Cloud,
 } from 'lucide-react';
 
 export const SettingsSection: React.FC = () => {
-  const { currentAdmin, resetToDefaultData, clearAllMembers, stats } = useClub();
+  const { currentAdmin, resetToDefaultData, clearAllMembers, stats, exportBackupData, importBackupData } = useClub();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        importBackupData(content);
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -31,11 +46,62 @@ export const SettingsSection: React.FC = () => {
           </h1>
         </div>
         <p className="text-xs text-slate-400 mt-1">
-          Configure membership fee standards, club headquarters parameters, and demo datasets
+          Configure membership fee standards, data backups, club parameters, and roster controls
         </p>
       </div>
 
-      {/* 1. Club Financial Fee Rule Settings */}
+      {/* 1. Database Backup & Restore */}
+      <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-950 to-blue-950/40 border border-blue-500/30 shadow-xl space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+            <Database className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-wider text-white">
+              Data Backup & Roster Recovery
+            </h3>
+            <p className="text-xs text-slate-400">
+              Download or restore your complete fighters roster, events, and accounting records
+            </p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+          <div className="flex items-start gap-2.5 text-xs text-slate-300">
+            <Cloud className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              <strong>Data Safety:</strong> Your fighters ({stats.totalMembers} members) and scheduled events are stored in your secure browser repository. You can download an offline <strong>JSON Backup file</strong> anytime to keep a permanent master copy on your phone or computer.
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-wrap items-center gap-3">
+            <button
+              onClick={exportBackupData}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-95"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download Backup File (.json)</span>
+            </button>
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-95"
+            >
+              <Upload className="w-4 h-4 text-blue-400" />
+              <span>Restore from Backup File</span>
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".json"
+              className="hidden"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Club Financial Fee Rule Settings */}
       <div className="p-6 rounded-2xl bg-slate-950/80 border border-blue-500/20 shadow-xl space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
@@ -71,7 +137,7 @@ export const SettingsSection: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Club Branding & Headquarters Information */}
+      {/* 3. Club Branding & Headquarters Information */}
       <div className="p-6 rounded-2xl bg-slate-950/80 border border-blue-500/20 shadow-xl space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
@@ -130,7 +196,7 @@ export const SettingsSection: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Administrator Profile */}
+      {/* 4. Administrator Profile */}
       <div className="p-6 rounded-2xl bg-slate-950/80 border border-blue-500/20 shadow-xl space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
@@ -169,7 +235,7 @@ export const SettingsSection: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Clear Roster */}
+      {/* 5. Clear Roster */}
       <div className="p-6 rounded-2xl bg-slate-950/80 border border-slate-800 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-sm font-black uppercase tracking-wider text-rose-400">
@@ -193,7 +259,7 @@ export const SettingsSection: React.FC = () => {
         </button>
       </div>
 
-      {/* 5. Reset Demo Data */}
+      {/* 6. Reset Demo Data */}
       <div className="p-6 rounded-2xl bg-slate-950/80 border border-slate-800 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-sm font-black uppercase tracking-wider text-white">

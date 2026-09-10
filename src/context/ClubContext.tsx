@@ -31,6 +31,8 @@ interface ClubContextType {
   deleteClubEvent: (id: string) => Promise<void>;
   resetToDefaultData: () => Promise<void>;
   clearAllMembers: () => Promise<void>;
+  exportBackupData: () => void;
+  importBackupData: (jsonString: string) => boolean;
   login: (email?: string, password?: string) => boolean;
   logout: () => void;
   refreshData: () => Promise<void>;
@@ -495,6 +497,43 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const exportBackupData = () => {
+    const backup = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      club: 'CEYLON FIGHTING CLUB',
+      members,
+      activities,
+      events,
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ceylon_fc_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Database backup downloaded successfully.', 'success');
+  };
+
+  const importBackupData = (jsonString: string): boolean => {
+    try {
+      const data = JSON.parse(jsonString);
+      if (data && Array.isArray(data.members)) {
+        persistMembers(data.members);
+        if (Array.isArray(data.activities)) persistActivities(data.activities);
+        if (Array.isArray(data.events)) persistEvents(data.events);
+        showToast(`Backup restored! ${data.members.length} members loaded.`, 'success');
+        return true;
+      }
+      showToast('Invalid backup file format.', 'error');
+      return false;
+    } catch {
+      showToast('Error reading backup file.', 'error');
+      return false;
+    }
+  };
+
   const resetToDefaultData = async () => {
     persistMembers(INITIAL_MEMBERS);
     persistActivities(INITIAL_ACTIVITIES);
@@ -565,6 +604,8 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteClubEvent,
         resetToDefaultData,
         clearAllMembers,
+        exportBackupData,
+        importBackupData,
         login,
         logout,
         refreshData,
