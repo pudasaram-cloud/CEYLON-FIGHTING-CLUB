@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBhMS-OjZBgHRR5cXNHD_0Kne2vOQTtUT4",
@@ -12,6 +12,14 @@ const firebaseConfig = {
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
+
+let db: ReturnType<typeof getFirestore>;
+try {
+  db = initializeFirestore(app, {
+    ignoreUndefinedProperties: true,
+  });
+} catch {
+  db = getFirestore(app);
+}
 
 export { app, db, firebaseConfig };
