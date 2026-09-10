@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const members = getAllMembers();
 
-    // Generate unique CFC ID
+    // Generate unique CFC ID or use provided ID
     const maxNum = members.reduce((acc, m) => {
       const match = m.id.match(/CFC-(\d+)/);
       if (match) {
@@ -38,16 +38,16 @@ export async function POST(request: Request) {
       return acc;
     }, 1000);
 
-    const newId = `CFC-${maxNum + 1}`;
-    const weightClass = calculateWeightClass(body.weight);
+    const newId = body.id || `CFC-${maxNum + 1}`;
+    const weightClass = body.weightClass || calculateWeightClass(body.weight);
 
     const newMember: Member = {
       ...body,
       id: newId,
       weightClass,
-      registrationFee: 1500, // Fixed LKR 1,500
-      attendanceCount: 1,
-      sparringRecord: { wins: 0, losses: 0, draws: 0 },
+      registrationFee: body.registrationFee || 1500, // Fixed LKR 1,500
+      attendanceCount: body.attendanceCount || 1,
+      sparringRecord: body.sparringRecord || { wins: 0, losses: 0, draws: 0 },
     };
 
     insertMember(newMember);

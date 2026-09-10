@@ -36,10 +36,23 @@ const DEFAULT_MEMBERS: Member[] = [
   },
 ];
 
-// In-memory state fallback for serverless environments
-let memoryMembers: Member[] = [...DEFAULT_MEMBERS];
-let memoryActivities: ActivityLog[] = [...INITIAL_ACTIVITIES];
-let memoryEvents: ClubEvent[] = [...INITIAL_EVENTS];
+// In-memory state fallback preserved in global object across serverless lifecycle
+const globalForDb = global as unknown as {
+  dbInstance?: any;
+  memoryMembers?: Member[];
+  memoryActivities?: ActivityLog[];
+  memoryEvents?: ClubEvent[];
+};
+
+if (!globalForDb.memoryMembers) {
+  globalForDb.memoryMembers = [...DEFAULT_MEMBERS];
+}
+if (!globalForDb.memoryActivities) {
+  globalForDb.memoryActivities = [...INITIAL_ACTIVITIES];
+}
+if (!globalForDb.memoryEvents) {
+  globalForDb.memoryEvents = [...INITIAL_EVENTS];
+}
 
 let sqliteDb: any = null;
 let useSqlite = false;
@@ -64,7 +77,6 @@ try {
     } catch {}
   }
 
-  const globalForDb = global as unknown as { dbInstance?: any };
   sqliteDb = globalForDb.dbInstance || new Database(dbPath);
   if (process.env.NODE_ENV !== 'production') {
     globalForDb.dbInstance = sqliteDb;
@@ -141,12 +153,12 @@ export function initDatabase() {
     const countEventsStmt = sqliteDb.prepare('SELECT COUNT(*) as count FROM events');
     const eventResult = countEventsStmt.get() as { count: number };
     if (eventResult.count === 0 && INITIAL_EVENTS.length > 0) {
-      const insertEvent = sqliteDb.prepare(`
+      const insertEventStmt = sqliteDb.prepare(`
         INSERT INTO events (id, title, category, date, time, location, participantsCount, status, description)
         VALUES (@id, @title, @category, @date, @time, @location, @participantsCount, @status, @description)
       `);
       for (const e of INITIAL_EVENTS) {
-        insertEvent.run({ ...e, description: e.description || null });
+        insertEventStmt.run({ ...e, description: e.description || null });
       }
     }
 
@@ -154,12 +166,12 @@ export function initDatabase() {
     const countActStmt = sqliteDb.prepare('SELECT COUNT(*) as count FROM activities');
     const actResult = countActStmt.get() as { count: number };
     if (actResult.count === 0 && INITIAL_ACTIVITIES.length > 0) {
-      const insertActivity = sqliteDb.prepare(`
+      const insertActivityStmt = sqliteDb.prepare(`
         INSERT INTO activities (id, type, title, description, timestamp, memberId, memberName)
         VALUES (@id, @type, @title, @description, @timestamp, @memberId, @memberName)
       `);
       for (const a of INITIAL_ACTIVITIES) {
-        insertActivity.run({
+        insertActivityStmt.run({
           ...a,
           memberId: a.memberId || null,
           memberName: a.memberName || null,
@@ -189,9 +201,9 @@ export function seedDatabase() {
       return;
     } catch {}
   }
-  memoryMembers = [];
-  memoryActivities = [...INITIAL_ACTIVITIES];
-  memoryEvents = [...INITIAL_EVENTS];
+  globalForDb.memoryMembers = [];
+  globalForDb.memoryActivities = [...INITIAL_ACTIVITIES];
+  globalForDb.memoryEvents = [...INITIAL_EVENTS];
 }
 
 // Clear all members
@@ -203,7 +215,7 @@ export function clearAllMembersFromDb() {
       return;
     } catch {}
   }
-  memoryMembers = [];
+  globalForDb.memoryMembers = [];
 }
 
 // Member Database Operations
@@ -221,7 +233,7 @@ export function getAllMembers(): Member[] {
       console.warn('Falling back to memory storage:', err);
     }
   }
-  return memoryMembers;
+  return globalForDb.memoryMembers || [];
 }
 
 export function insertMember(member: Member): Member {
@@ -276,7 +288,8 @@ export function insertMember(member: Member): Member {
     }
   }
 
-  memoryMembers = [member, ...memoryMembers.filter((m) => m.id !== member.id)];
+  const existing = globalForDb.memoryMembers || [];
+  globalForDb.memoryMembers = [member, ...existing.filter((m) => m.id !== member.id)];
   return member;
 }
 
@@ -327,10 +340,12 @@ export function updateMemberInDb(id: string, updates: Partial<Member>): Member |
     }
   }
 
-  const idx = memoryMembers.findIndex((m) => m.id === id);
+  const existing = globalForDb.memoryMembers || [];
+  const idx = existing.findIndex((m) => m.id === id);
   if (idx === -1) return null;
-  memoryMembers[idx] = { ...memoryMembers[idx], ...updates };
-  return memoryMembers[idx];
+  existing[idx] = { ...existing[idx], ...updates };
+  globalForDb.memoryMembers = [...existing];
+  return existing[idx];
 }
 
 export function deleteMemberFromDb(id: string): boolean {
@@ -345,9 +360,10 @@ export function deleteMemberFromDb(id: string): boolean {
     }
   }
 
-  const initialLen = memoryMembers.length;
-  memoryMembers = memoryMembers.filter((m) => m.id !== id);
-  return memoryMembers.length < initialLen;
+  const existing = globalForDb.memoryMembers || [];
+  const initialLen = existing.length;
+  globalForDb.memoryMembers = existing.filter((m) => m.id !== id);
+  return globalForDb.memoryMembers.length < initialLen;
 }
 
 // Activities Operations
@@ -358,7 +374,7 @@ export function getAllActivities(): ActivityLog[] {
       return sqliteDb.prepare('SELECT * FROM activities ORDER BY timestamp DESC, createdAt DESC').all() as ActivityLog[];
     } catch {}
   }
-  return memoryActivities;
+  return globalForDb.memoryActivities || [];
 }
 
 export function insertActivity(activity: ActivityLog): ActivityLog {
@@ -378,7 +394,8 @@ export function insertActivity(activity: ActivityLog): ActivityLog {
     } catch {}
   }
 
-  memoryActivities = [activity, ...memoryActivities];
+  const existing = globalForDb.memoryActivities || [];
+  globalForDb.memoryActivities = [activity, ...existing];
   return activity;
 }
 
@@ -390,7 +407,7 @@ export function getAllEvents(): ClubEvent[] {
       return sqliteDb.prepare('SELECT * FROM events ORDER BY date ASC, createdAt DESC').all() as ClubEvent[];
     } catch {}
   }
-  return memoryEvents;
+  return globalForDb.memoryEvents || [];
 }
 
 export function insertEvent(event: ClubEvent): ClubEvent {
@@ -409,6 +426,25 @@ export function insertEvent(event: ClubEvent): ClubEvent {
     } catch {}
   }
 
-  memoryEvents = [event, ...memoryEvents];
+  const existing = globalForDb.memoryEvents || [];
+  globalForDb.memoryEvents = [event, ...existing];
   return event;
+}
+
+export function deleteEventFromDb(id: string): boolean {
+  if (useSqlite && sqliteDb) {
+    try {
+      initDatabase();
+      const stmt = sqliteDb.prepare('DELETE FROM events WHERE id = ?');
+      const result = stmt.run(id);
+      return result.changes > 0;
+    } catch (err) {
+      console.warn('Falling back to memory delete event:', err);
+    }
+  }
+
+  const existing = globalForDb.memoryEvents || [];
+  const initialLen = existing.length;
+  globalForDb.memoryEvents = existing.filter((e) => e.id !== id);
+  return (globalForDb.memoryEvents?.length || 0) < initialLen;
 }

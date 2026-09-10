@@ -28,6 +28,7 @@ interface ClubContextType {
   deleteMember: (id: string) => Promise<void>;
   togglePaymentStatus: (id: string) => Promise<void>;
   addClubEvent: (event: Omit<ClubEvent, 'id'>) => Promise<void>;
+  deleteClubEvent: (id: string) => Promise<void>;
   resetToDefaultData: () => Promise<void>;
   clearAllMembers: () => Promise<void>;
   login: (email?: string, password?: string) => boolean;
@@ -68,7 +69,29 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Fetch data from embedded SQLite database via API
+  // Sync helpers to localStorage
+  const persistMembers = (newMembers: Member[]) => {
+    setMembers(newMembers);
+    try {
+      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(newMembers));
+    } catch {}
+  };
+
+  const persistActivities = (newActivities: ActivityLog[]) => {
+    setActivities(newActivities);
+    try {
+      localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(newActivities));
+    } catch {}
+  };
+
+  const persistEvents = (newEvents: ClubEvent[]) => {
+    setEvents(newEvents);
+    try {
+      localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(newEvents));
+    } catch {}
+  };
+
+  // Safe merge logic to preserve locally added fighters across serverless cold starts
   const refreshData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -81,30 +104,57 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (membersRes && membersRes.ok) {
         const json = await membersRes.json();
         if (json.success && Array.isArray(json.data)) {
-          setMembers(json.data);
+          let localMembers: Member[] = [];
           try {
-            localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(json.data));
+            const raw = localStorage.getItem(STORAGE_KEY_MEMBERS);
+            if (raw) localMembers = JSON.parse(raw);
           } catch {}
+
+          // Create map starting with server data, then override/append local data so user records are never lost
+          const memberMap = new Map<string, Member>();
+          json.data.forEach((m: Member) => memberMap.set(m.id, m));
+          localMembers.forEach((m: Member) => memberMap.set(m.id, m));
+
+          const merged = Array.from(memberMap.values());
+          persistMembers(merged);
         }
       }
 
       if (activitiesRes && activitiesRes.ok) {
         const json = await activitiesRes.json();
         if (json.success && Array.isArray(json.data)) {
-          setActivities(json.data);
+          let localAct: ActivityLog[] = [];
           try {
-            localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(json.data));
+            const raw = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
+            if (raw) localAct = JSON.parse(raw);
           } catch {}
+
+          const actMap = new Map<string, ActivityLog>();
+          json.data.forEach((a: ActivityLog) => actMap.set(a.id, a));
+          localAct.forEach((a: ActivityLog) => actMap.set(a.id, a));
+
+          const mergedAct = Array.from(actMap.values()).sort(
+            (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+          persistActivities(mergedAct);
         }
       }
 
       if (eventsRes && eventsRes.ok) {
         const json = await eventsRes.json();
         if (json.success && Array.isArray(json.data)) {
-          setEvents(json.data);
+          let localEvt: ClubEvent[] = [];
           try {
-            localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(json.data));
+            const raw = localStorage.getItem(STORAGE_KEY_EVENTS);
+            if (raw) localEvt = JSON.parse(raw);
           } catch {}
+
+          const evtMap = new Map<string, ClubEvent>();
+          json.data.forEach((e: ClubEvent) => evtMap.set(e.id, e));
+          localEvt.forEach((e: ClubEvent) => evtMap.set(e.id, e));
+
+          const mergedEvt = Array.from(evtMap.values());
+          persistEvents(mergedEvt);
         }
       }
     } catch (err) {
@@ -114,7 +164,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Hydrate on mount from local storage first (instant response) then sync with API
+  // Hydrate on mount from local storage first (instant response)
   useEffect(() => {
     try {
       const storedAuth = localStorage.getItem(STORAGE_KEY_AUTH);
@@ -125,7 +175,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedMembers = localStorage.getItem(STORAGE_KEY_MEMBERS);
       if (storedMembers) {
         const parsed = JSON.parse(storedMembers);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           setMembers(parsed);
         }
       }
@@ -133,7 +183,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedActivities = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
       if (storedActivities) {
         const parsed = JSON.parse(storedActivities);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           setActivities(parsed);
         }
       }
@@ -141,7 +191,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedEvents = localStorage.getItem(STORAGE_KEY_EVENTS);
       if (storedEvents) {
         const parsed = JSON.parse(storedEvents);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           setEvents(parsed);
         }
       }
@@ -149,30 +199,6 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     refreshData();
   }, [refreshData]);
-
-  // Sync members to localStorage
-  const updateMembersState = (newMembers: Member[]) => {
-    setMembers(newMembers);
-    try {
-      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(newMembers));
-    } catch {}
-  };
-
-  // Sync activities to localStorage
-  const updateActivitiesState = (newActivities: ActivityLog[]) => {
-    setActivities(newActivities);
-    try {
-      localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(newActivities));
-    } catch {}
-  };
-
-  // Sync events to localStorage
-  const updateEventsState = (newEvents: ClubEvent[]) => {
-    setEvents(newEvents);
-    try {
-      localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(newEvents));
-    } catch {}
-  };
 
   // Dynamic Dashboard Stats Calculation
   const totalMembers = members.length;
@@ -203,48 +229,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const registerMember = async (
     data: Omit<Member, 'id' | 'registrationFee' | 'attendanceCount' | 'sparringRecord' | 'weightClass'>
   ): Promise<Member | void> => {
-    try {
-      const res = await fetch('/api/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          const newMember = json.data;
-          updateMembersState([newMember, ...members.filter((m) => m.id !== newMember.id)]);
-
-          // Refresh activities to show new log from embedded DB
-          const actRes = await fetch('/api/activities').catch(() => null);
-          if (actRes && actRes.ok) {
-            const actJson = await actRes.json();
-            if (actJson.data) updateActivitiesState(actJson.data);
-          }
-
-          showToast(
-            `Champion registered! ${data.fullName} stored in embedded database. (Total Revenue +LKR 1,500)`,
-            'success'
-          );
-
-          try {
-            confetti({
-              particleCount: 80,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ['#2563eb', '#38bdf8', '#ffffff'],
-            });
-          } catch {}
-
-          return newMember;
-        }
-      }
-    } catch (err) {
-      console.error('Failed to save to embedded DB:', err);
-    }
-
-    // Fallback if network or serverless issue
+    // Generate unique ID based on ALL known members in state
     const maxNum = members.reduce((acc, m) => {
       const match = m.id.match(/CFC-(\d+)/);
       if (match) {
@@ -264,13 +249,52 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       attendanceCount: 1,
       sparringRecord: { wins: 0, losses: 0, draws: 0 },
     };
-    updateMembersState([newMember, ...members]);
-    showToast(`Registered ${data.fullName} (Revenue +LKR 1,500)`, 'success');
+
+    // 1. Immediately persist locally (zero data loss across Vercel serverless requests)
+    const updatedMembers = [newMember, ...members.filter((m) => m.id !== newId)];
+    persistMembers(updatedMembers);
+
+    const newActivity: ActivityLog = {
+      id: `act-${Date.now()}`,
+      type: 'registration',
+      title: 'New Member Registered',
+      description: `${newMember.fullName} registered as ${weightClass} (${newMember.discipline}). LKR 1,500 fee added.`,
+      timestamp: new Date().toISOString(),
+      memberId: newId,
+      memberName: newMember.fullName,
+    };
+    persistActivities([newActivity, ...activities]);
+
+    showToast(
+      `Champion registered! ${data.fullName} stored in database. (Total Revenue +LKR 1,500)`,
+      'success'
+    );
+
+    try {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#2563eb', '#38bdf8', '#ffffff'],
+      });
+    } catch {}
+
+    // 2. Best-effort async sync to API backend
+    try {
+      await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMember),
+      });
+    } catch (err) {
+      console.warn('API sync warning (persisted in local store):', err);
+    }
+
     return newMember;
   };
 
   const updateMember = async (id: string, updatedData: Partial<Member>) => {
-    // Optimistic update
+    // Immediate state & local storage update
     const newMembers = members.map((m) => {
       if (m.id === id) {
         const updated = { ...m, ...updatedData };
@@ -281,28 +305,33 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return m;
     });
-    updateMembersState(newMembers);
+    persistMembers(newMembers);
 
+    const targetMember = newMembers.find((m) => m.id === id);
+    if (targetMember) {
+      const updateActivity: ActivityLog = {
+        id: `act-${Date.now()}`,
+        type: 'update',
+        title: 'Member Profile Updated',
+        description: `Updated fighter record and details for ${targetMember.fullName}.`,
+        timestamp: new Date().toISOString(),
+        memberId: id,
+        memberName: targetMember.fullName,
+      };
+      persistActivities([updateActivity, ...activities]);
+    }
+
+    showToast(`Fighter record updated successfully.`, 'info');
+
+    // Async backend update
     try {
-      const res = await fetch(`/api/members/${id}`, {
+      await fetch(`/api/members/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedData),
       });
-
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          showToast(`Fighter record updated in embedded database.`, 'info');
-          const actRes = await fetch('/api/activities').catch(() => null);
-          if (actRes && actRes.ok) {
-            const actJson = await actRes.json();
-            if (actJson.data) updateActivitiesState(actJson.data);
-          }
-        }
-      }
     } catch (err) {
-      console.error('Error updating member:', err);
+      console.warn('API update warning:', err);
     }
   };
 
@@ -310,28 +339,33 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const targetMember = members.find((m) => m.id === id);
     if (!targetMember) return;
 
-    // Optimistic delete
+    // Immediate state & local storage update
     const newMembers = members.filter((m) => m.id !== id);
-    updateMembersState(newMembers);
+    persistMembers(newMembers);
 
+    const deleteActivity: ActivityLog = {
+      id: `act-${Date.now()}`,
+      type: 'deletion',
+      title: 'Member Removed',
+      description: `${targetMember.fullName} (${id}) was deleted. Total revenue dynamically updated (-LKR 1,500).`,
+      timestamp: new Date().toISOString(),
+      memberId: id,
+      memberName: targetMember.fullName,
+    };
+    persistActivities([deleteActivity, ...activities]);
+
+    showToast(
+      `Member ${targetMember.fullName} deleted. Total Revenue recalculated (-LKR 1,500).`,
+      'warning'
+    );
+
+    // Async backend delete
     try {
-      const res = await fetch(`/api/members/${id}`, {
+      await fetch(`/api/members/${id}`, {
         method: 'DELETE',
       });
-
-      if (res.ok) {
-        showToast(
-          `Member ${targetMember.fullName} deleted from embedded database. Total Revenue recalculated (-LKR 1,500).`,
-          'warning'
-        );
-        const actRes = await fetch('/api/activities').catch(() => null);
-        if (actRes && actRes.ok) {
-          const actJson = await actRes.json();
-          if (actJson.data) updateActivitiesState(actJson.data);
-        }
-      }
     } catch (err) {
-      console.error('Error deleting member:', err);
+      console.warn('API delete warning:', err);
     }
   };
 
@@ -344,62 +378,96 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addClubEvent = async (eventData: Omit<ClubEvent, 'id'>) => {
+    const newEvent: ClubEvent = {
+      ...eventData,
+      id: `evt-${Date.now()}`,
+    };
+
+    // 1. Immediate state & local storage update
+    persistEvents([newEvent, ...events]);
+
+    const newActivity: ActivityLog = {
+      id: `act-${Date.now()}`,
+      type: 'event',
+      title: 'New Combat Event Added',
+      description: `Scheduled "${newEvent.title}" on ${newEvent.date}.`,
+      timestamp: new Date().toISOString(),
+    };
+    persistActivities([newActivity, ...activities]);
+
+    showToast(`Combat event "${eventData.title}" saved to calendar.`, 'success');
+
+    // 2. Async backend save
     try {
-      const res = await fetch('/api/events', {
+      await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(eventData),
+        body: JSON.stringify(newEvent),
       });
-
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          updateEventsState([json.data, ...events]);
-          showToast(`Combat event "${eventData.title}" saved to calendar.`, 'success');
-          return;
-        }
-      }
     } catch (err) {
-      console.error('Error adding event:', err);
+      console.warn('API event sync warning:', err);
     }
+  };
 
-    // Fallback
-    const newEvent: ClubEvent = { ...eventData, id: `evt-${Date.now()}` };
-    updateEventsState([newEvent, ...events]);
+  const deleteClubEvent = async (id: string) => {
+    const target = events.find((e) => e.id === id);
+    if (!target) return;
+
+    // 1. Immediate state & local storage update
+    const newEvents = events.filter((e) => e.id !== id);
+    persistEvents(newEvents);
+
+    const deleteActivity: ActivityLog = {
+      id: `act-${Date.now()}`,
+      type: 'event',
+      title: 'Combat Event Cancelled',
+      description: `Removed scheduled event "${target.title}" from calendar.`,
+      timestamp: new Date().toISOString(),
+    };
+    persistActivities([deleteActivity, ...activities]);
+
+    showToast(`Combat event "${target.title}" deleted from calendar.`, 'info');
+
+    // 2. Async backend delete
+    try {
+      await fetch(`/api/events/${id}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('API event delete warning:', err);
+    }
   };
 
   const resetToDefaultData = async () => {
-    try {
-      const res = await fetch('/api/reset', { method: 'POST' });
-      if (res.ok) {
-        await refreshData();
-        showToast('Embedded database successfully reset to default seed data.', 'info');
-        return;
-      }
-    } catch (err) {
-      console.error('Error resetting database:', err);
-    }
-
-    updateMembersState(INITIAL_MEMBERS);
-    updateActivitiesState(INITIAL_ACTIVITIES);
-    updateEventsState(INITIAL_EVENTS);
+    persistMembers(INITIAL_MEMBERS);
+    persistActivities(INITIAL_ACTIVITIES);
+    persistEvents(INITIAL_EVENTS);
     showToast('Reset to default demo data.', 'info');
+
+    try {
+      await fetch('/api/reset', { method: 'POST' });
+    } catch (err) {
+      console.warn('Reset API warning:', err);
+    }
   };
 
   const clearAllMembers = async () => {
-    updateMembersState([]);
+    persistMembers([]);
+    showToast('All member records cleared from database. Roster is empty.', 'info');
+
+    const clearActivity: ActivityLog = {
+      id: `act-${Date.now()}`,
+      type: 'deletion',
+      title: 'Roster Cleared',
+      description: 'Administrator cleared all member records.',
+      timestamp: new Date().toISOString(),
+    };
+    persistActivities([clearActivity, ...activities]);
+
     try {
-      const res = await fetch('/api/members', { method: 'DELETE' });
-      if (res.ok) {
-        showToast('All member records cleared from database. Roster is empty.', 'info');
-        const actRes = await fetch('/api/activities').catch(() => null);
-        if (actRes && actRes.ok) {
-          const actJson = await actRes.json();
-          if (actJson.data) updateActivitiesState(actJson.data);
-        }
-      }
+      await fetch('/api/members', { method: 'DELETE' });
     } catch (err) {
-      console.error('Error clearing members:', err);
+      console.warn('Clear members API warning:', err);
     }
   };
 
@@ -437,6 +505,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteMember,
         togglePaymentStatus,
         addClubEvent,
+        deleteClubEvent,
         resetToDefaultData,
         clearAllMembers,
         login,
