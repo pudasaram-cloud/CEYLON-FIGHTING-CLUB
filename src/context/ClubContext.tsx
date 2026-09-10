@@ -104,7 +104,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
   };
 
-  // Server-authoritative sync to mirror additions, edits, and deletions in real-time across all PCs & devices
+  // Rock-solid non-flickering sync logic
   const refreshData = useCallback(async () => {
     try {
       const [membersRes, activitiesRes, eventsRes] = await Promise.all([
@@ -115,21 +115,21 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (membersRes && membersRes.ok) {
         const json = await membersRes.json();
-        if (json.success && Array.isArray(json.data)) {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           persistMembers(json.data);
         }
       }
 
       if (activitiesRes && activitiesRes.ok) {
         const json = await activitiesRes.json();
-        if (json.success && Array.isArray(json.data)) {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           persistActivities(json.data);
         }
       }
 
       if (eventsRes && eventsRes.ok) {
         const json = await eventsRes.json();
-        if (json.success && Array.isArray(json.data)) {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           persistEvents(json.data);
         }
       }
@@ -138,7 +138,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Hydrate on mount from local storage first (instant response)
+  // Hydrate on mount from local storage first (instant response, zero flicker)
   useEffect(() => {
     try {
       const storedAuth = localStorage.getItem(STORAGE_KEY_AUTH);
@@ -152,7 +152,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (rawMembers) {
         try {
           const parsed = JSON.parse(rawMembers);
-          if (Array.isArray(parsed)) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             setMembers(parsed);
           }
         } catch {}
@@ -162,7 +162,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (rawAct) {
         try {
           const parsed = JSON.parse(rawAct);
-          if (Array.isArray(parsed)) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             setActivities(parsed);
           }
         } catch {}
@@ -172,7 +172,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (rawEvt) {
         try {
           const parsed = JSON.parse(rawEvt);
-          if (Array.isArray(parsed)) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             setEvents(parsed);
           }
         } catch {}
@@ -180,25 +180,6 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
 
     refreshData();
-  }, [refreshData]);
-
-  // Real-time background sync: Auto-refreshes data when window gets focus or every 4 seconds
-  useEffect(() => {
-    const handleSync = () => {
-      refreshData();
-    };
-
-    window.addEventListener('focus', handleSync);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') handleSync();
-    });
-
-    const interval = setInterval(handleSync, 4000);
-
-    return () => {
-      window.removeEventListener('focus', handleSync);
-      clearInterval(interval);
-    };
   }, [refreshData]);
 
   // Dynamic Dashboard Stats Calculation
@@ -250,7 +231,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sparringRecord: { wins: 0, losses: 0, draws: 0 },
     };
 
-    // 1. Optimistic local update
+    // 1. Permanent immediate local update
     persistMembers([newMember, ...members.filter((m) => m.id !== newId)]);
 
     const newActivity: ActivityLog = {
@@ -278,14 +259,13 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch {}
 
-    // 2. Sync to API backend and refresh
+    // 2. Sync to API backend
     try {
       await fetch('/api/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newMember),
       });
-      await refreshData();
     } catch (err) {
       console.warn('API sync warning:', err);
     }
@@ -294,7 +274,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateMember = async (id: string, updatedData: Partial<Member>) => {
-    // 1. Optimistic update
+    // 1. Immediate local update
     const newMembers = members.map((m) => {
       if (m.id === id) {
         const updated = { ...m, ...updatedData };
@@ -323,14 +303,13 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     showToast(`Fighter record updated successfully.`, 'info');
 
-    // 2. Backend update and refresh
+    // 2. Backend update
     try {
       await fetch(`/api/members/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedData),
       });
-      await refreshData();
     } catch (err) {
       console.warn('API update warning:', err);
     }
@@ -340,7 +319,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const targetMember = members.find((m) => m.id === id);
     if (!targetMember) return;
 
-    // 1. Optimistic delete
+    // 1. Immediate local delete
     const newMembers = members.filter((m) => m.id !== id);
     persistMembers(newMembers);
 
@@ -360,12 +339,11 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       'warning'
     );
 
-    // 2. Server delete and refresh
+    // 2. Server delete
     try {
       await fetch(`/api/members/${id}`, {
         method: 'DELETE',
       });
-      await refreshData();
     } catch (err) {
       console.warn('API delete warning:', err);
     }
@@ -385,7 +363,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: `evt-${Date.now()}`,
     };
 
-    // 1. Optimistic local update
+    // 1. Immediate local update
     persistEvents([newEvent, ...events]);
 
     const newActivity: ActivityLog = {
@@ -399,14 +377,13 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     showToast(`Combat event "${eventData.title}" saved to calendar.`, 'success');
 
-    // 2. Server save and refresh
+    // 2. Server save
     try {
       await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newEvent),
       });
-      await refreshData();
     } catch (err) {
       console.warn('API event sync warning:', err);
     }
@@ -416,7 +393,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const target = events.find((e) => e.id === id);
     if (!target) return;
 
-    // 1. Optimistic delete
+    // 1. Immediate local delete
     const newEvents = events.filter((e) => e.id !== id);
     persistEvents(newEvents);
 
@@ -431,12 +408,11 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     showToast(`Combat event "${target.title}" deleted from calendar.`, 'info');
 
-    // 2. Server delete and refresh
+    // 2. Server delete
     try {
       await fetch(`/api/events/${id}`, {
         method: 'DELETE',
       });
-      await refreshData();
     } catch (err) {
       console.warn('API event delete warning:', err);
     }
@@ -487,7 +463,6 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       await fetch('/api/reset', { method: 'POST' });
-      await refreshData();
     } catch (err) {
       console.warn('Reset API warning:', err);
     }
@@ -508,7 +483,6 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       await fetch('/api/members', { method: 'DELETE' });
-      await refreshData();
     } catch (err) {
       console.warn('Clear members API warning:', err);
     }
