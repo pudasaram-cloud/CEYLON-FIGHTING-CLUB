@@ -197,9 +197,10 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return num > acc ? num : acc;
       }
       return acc;
-    }, 1000);
+    }, 0);
 
-    const newId = `CFC-${maxNum + 1}`;
+    const nextNumber = maxNum + 1;
+    const newId = `CFC-${String(nextNumber).padStart(4, '0')}`;
     const weightClass = calculateWeightClass(data.weight);
     const newMember: Member = {
       ...data,

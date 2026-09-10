@@ -1,99 +1,15 @@
 import { Member, ActivityLog, ClubEvent } from '@/types';
 
-export const INITIAL_MEMBERS: Member[] = [
-  {
-    id: 'CFC-1001',
-    idNumber: '200432201685',
-    fullName: 'Benny Falcon',
-    age: 24,
-    dateOfBirth: '2002-05-15',
-    gender: 'Male',
-    phoneNumber: '+94701095008',
-    email: 'mpudasara@gmail.com',
-    address: 'Colombo, Sri Lanka',
-    weight: 70,
-    height: 175,
-    weightClass: 'Lightweight (66-70kg)',
-    discipline: 'MMA',
-    skillLevel: 'Intermediate',
-    beltRank: 'Blue Belt',
-    registrationDate: '2026-09-10',
-    registrationFee: 1500,
-    paymentStatus: 'Paid',
-    membershipStatus: 'Active',
-    defaultAvatarType: 'male-vector',
-    emergencyContact: {
-      name: 'Family Contact',
-      phone: '+94701095008',
-      relationship: 'Parent',
-    },
-    attendanceCount: 1,
-    sparringRecord: { wins: 0, losses: 0, draws: 0 },
-  },
-];
+export const INITIAL_MEMBERS: Member[] = [];
 
 export const INITIAL_ACTIVITIES: ActivityLog[] = [
   {
     id: 'act-init-01',
     type: 'system',
     title: 'Ceylon FC System Online',
-    description: 'Dojo athlete database initialized. Ready for fighter admissions starting with ID CFC-1001.',
+    description: 'Cloud database initialized. Ready for fighter admissions starting with ID CFC-0001.',
     timestamp: new Date().toISOString(),
-  },
-  {
-    id: 'act-init-02',
-    type: 'registration',
-    title: 'New Member Registered',
-    description: 'Benny Falcon registered as Lightweight (MMA). LKR 1,500 fee added.',
-    timestamp: '2026-09-10T10:30:00.000Z',
-    memberId: 'CFC-1001',
-    memberName: 'Benny Falcon',
   },
 ];
 
-export const INITIAL_EVENTS: ClubEvent[] = [
-  {
-    id: 'evt-101',
-    title: 'Ceylon Cage Warriors: Fight Night V',
-    category: 'Fight Night',
-    date: '2026-09-26',
-    time: '18:00 - 22:30',
-    location: 'Sugathadasa Indoor Stadium, Colombo',
-    participantsCount: 24,
-    status: 'Upcoming',
-    description: 'Annual Ceylon Combat League tournament featuring Welterweight & Middleweight title fights.',
-  },
-  {
-    id: 'evt-102',
-    title: 'Open Mat Submission Only Sparring',
-    category: 'Sparring Session',
-    date: '2026-09-15',
-    time: '09:00 - 12:00',
-    location: 'CFC Main Dojo & Cage, Colombo 03',
-    participantsCount: 32,
-    status: 'Upcoming',
-    description: 'High intensity grappling & submission sparring for intermediate and advanced members.',
-  },
-  {
-    id: 'evt-103',
-    title: 'Muay Thai Clinch & Elbow Masterclass',
-    category: 'Masterclass Workshop',
-    date: '2026-10-03',
-    time: '14:00 - 17:00',
-    location: 'CFC Striking Arena, Colombo 03',
-    participantsCount: 18,
-    status: 'Upcoming',
-    description: 'Guest Thai trainer masterclass on close-quarter elbow strikes and sweep defenses.',
-  },
-  {
-    id: 'evt-104',
-    title: 'Quarterly BJJ & Striking Belt Grading',
-    category: 'Belt Grading',
-    date: '2026-10-18',
-    time: '10:00 - 14:00',
-    location: 'CFC Main Dojo',
-    participantsCount: 40,
-    status: 'Upcoming',
-    description: 'Official test and promotion ceremony for junior & senior martial artists.',
-  },
-];
+export const INITIAL_EVENTS: ClubEvent[] = [];
