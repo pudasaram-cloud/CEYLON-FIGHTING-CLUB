@@ -38,6 +38,9 @@ interface ClubContextType {
 const ClubContext = createContext<ClubContextType | undefined>(undefined);
 
 const STORAGE_KEY_AUTH = 'cfc_auth_session_v1';
+const STORAGE_KEY_MEMBERS = 'cfc_members_v2';
+const STORAGE_KEY_ACTIVITIES = 'cfc_activities_v2';
+const STORAGE_KEY_EVENTS = 'cfc_events_v2';
 
 export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
@@ -70,29 +73,38 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       const [membersRes, activitiesRes, eventsRes] = await Promise.all([
-        fetch('/api/members'),
-        fetch('/api/activities'),
-        fetch('/api/events'),
+        fetch('/api/members').catch(() => null),
+        fetch('/api/activities').catch(() => null),
+        fetch('/api/events').catch(() => null),
       ]);
 
-      if (membersRes.ok) {
+      if (membersRes && membersRes.ok) {
         const json = await membersRes.json();
         if (json.success && Array.isArray(json.data)) {
           setMembers(json.data);
+          try {
+            localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(json.data));
+          } catch {}
         }
       }
 
-      if (activitiesRes.ok) {
+      if (activitiesRes && activitiesRes.ok) {
         const json = await activitiesRes.json();
         if (json.success && Array.isArray(json.data)) {
           setActivities(json.data);
+          try {
+            localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(json.data));
+          } catch {}
         }
       }
 
-      if (eventsRes.ok) {
+      if (eventsRes && eventsRes.ok) {
         const json = await eventsRes.json();
         if (json.success && Array.isArray(json.data)) {
           setEvents(json.data);
+          try {
+            localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(json.data));
+          } catch {}
         }
       }
     } catch (err) {
@@ -102,17 +114,65 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Hydrate on mount
+  // Hydrate on mount from local storage first (instant response) then sync with API
   useEffect(() => {
     try {
       const storedAuth = localStorage.getItem(STORAGE_KEY_AUTH);
       if (storedAuth !== null) {
         setIsAuthenticated(storedAuth === 'true');
       }
+
+      const storedMembers = localStorage.getItem(STORAGE_KEY_MEMBERS);
+      if (storedMembers) {
+        const parsed = JSON.parse(storedMembers);
+        if (Array.isArray(parsed)) {
+          setMembers(parsed);
+        }
+      }
+
+      const storedActivities = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
+      if (storedActivities) {
+        const parsed = JSON.parse(storedActivities);
+        if (Array.isArray(parsed)) {
+          setActivities(parsed);
+        }
+      }
+
+      const storedEvents = localStorage.getItem(STORAGE_KEY_EVENTS);
+      if (storedEvents) {
+        const parsed = JSON.parse(storedEvents);
+        if (Array.isArray(parsed)) {
+          setEvents(parsed);
+        }
+      }
     } catch {}
 
     refreshData();
   }, [refreshData]);
+
+  // Sync members to localStorage
+  const updateMembersState = (newMembers: Member[]) => {
+    setMembers(newMembers);
+    try {
+      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(newMembers));
+    } catch {}
+  };
+
+  // Sync activities to localStorage
+  const updateActivitiesState = (newActivities: ActivityLog[]) => {
+    setActivities(newActivities);
+    try {
+      localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(newActivities));
+    } catch {}
+  };
+
+  // Sync events to localStorage
+  const updateEventsState = (newEvents: ClubEvent[]) => {
+    setEvents(newEvents);
+    try {
+      localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(newEvents));
+    } catch {}
+  };
 
   // Dynamic Dashboard Stats Calculation
   const totalMembers = members.length;
@@ -154,13 +214,13 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const json = await res.json();
         if (json.success && json.data) {
           const newMember = json.data;
-          setMembers((prev) => [newMember, ...prev]);
+          updateMembersState([newMember, ...members.filter((m) => m.id !== newMember.id)]);
 
           // Refresh activities to show new log from embedded DB
-          const actRes = await fetch('/api/activities');
-          if (actRes.ok) {
+          const actRes = await fetch('/api/activities').catch(() => null);
+          if (actRes && actRes.ok) {
             const actJson = await actRes.json();
-            if (actJson.data) setActivities(actJson.data);
+            if (actJson.data) updateActivitiesState(actJson.data);
           }
 
           showToast(
@@ -184,7 +244,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Failed to save to embedded DB:', err);
     }
 
-    // Fallback if network issue
+    // Fallback if network or serverless issue
     const maxNum = members.reduce((acc, m) => {
       const match = m.id.match(/CFC-(\d+)/);
       if (match) {
@@ -204,25 +264,24 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       attendanceCount: 1,
       sparringRecord: { wins: 0, losses: 0, draws: 0 },
     };
-    setMembers((prev) => [newMember, ...prev]);
+    updateMembersState([newMember, ...members]);
     showToast(`Registered ${data.fullName} (Revenue +LKR 1,500)`, 'success');
     return newMember;
   };
 
   const updateMember = async (id: string, updatedData: Partial<Member>) => {
     // Optimistic update
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id === id) {
-          const updated = { ...m, ...updatedData };
-          if (updatedData.weight) {
-            updated.weightClass = calculateWeightClass(updatedData.weight);
-          }
-          return updated;
+    const newMembers = members.map((m) => {
+      if (m.id === id) {
+        const updated = { ...m, ...updatedData };
+        if (updatedData.weight) {
+          updated.weightClass = calculateWeightClass(updatedData.weight);
         }
-        return m;
-      })
-    );
+        return updated;
+      }
+      return m;
+    });
+    updateMembersState(newMembers);
 
     try {
       const res = await fetch(`/api/members/${id}`, {
@@ -235,11 +294,10 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const json = await res.json();
         if (json.success && json.data) {
           showToast(`Fighter record updated in embedded database.`, 'info');
-          // Refresh activities
-          const actRes = await fetch('/api/activities');
-          if (actRes.ok) {
+          const actRes = await fetch('/api/activities').catch(() => null);
+          if (actRes && actRes.ok) {
             const actJson = await actRes.json();
-            if (actJson.data) setActivities(actJson.data);
+            if (actJson.data) updateActivitiesState(actJson.data);
           }
         }
       }
@@ -253,7 +311,8 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!targetMember) return;
 
     // Optimistic delete
-    setMembers((prev) => prev.filter((m) => m.id !== id));
+    const newMembers = members.filter((m) => m.id !== id);
+    updateMembersState(newMembers);
 
     try {
       const res = await fetch(`/api/members/${id}`, {
@@ -265,10 +324,10 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
           `Member ${targetMember.fullName} deleted from embedded database. Total Revenue recalculated (-LKR 1,500).`,
           'warning'
         );
-        const actRes = await fetch('/api/activities');
-        if (actRes.ok) {
+        const actRes = await fetch('/api/activities').catch(() => null);
+        if (actRes && actRes.ok) {
           const actJson = await actRes.json();
-          if (actJson.data) setActivities(actJson.data);
+          if (actJson.data) updateActivitiesState(actJson.data);
         }
       }
     } catch (err) {
@@ -295,7 +354,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          setEvents((prev) => [json.data, ...prev]);
+          updateEventsState([json.data, ...events]);
           showToast(`Combat event "${eventData.title}" saved to calendar.`, 'success');
           return;
         }
@@ -306,7 +365,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Fallback
     const newEvent: ClubEvent = { ...eventData, id: `evt-${Date.now()}` };
-    setEvents((prev) => [newEvent, ...prev]);
+    updateEventsState([newEvent, ...events]);
   };
 
   const resetToDefaultData = async () => {
@@ -321,22 +380,22 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error resetting database:', err);
     }
 
-    setMembers(INITIAL_MEMBERS);
-    setActivities(INITIAL_ACTIVITIES);
-    setEvents(INITIAL_EVENTS);
+    updateMembersState(INITIAL_MEMBERS);
+    updateActivitiesState(INITIAL_ACTIVITIES);
+    updateEventsState(INITIAL_EVENTS);
     showToast('Reset to default demo data.', 'info');
   };
 
   const clearAllMembers = async () => {
-    setMembers([]);
+    updateMembersState([]);
     try {
       const res = await fetch('/api/members', { method: 'DELETE' });
       if (res.ok) {
         showToast('All member records cleared from database. Roster is empty.', 'info');
-        const actRes = await fetch('/api/activities');
-        if (actRes.ok) {
+        const actRes = await fetch('/api/activities').catch(() => null);
+        if (actRes && actRes.ok) {
           const actJson = await actRes.json();
-          if (actJson.data) setActivities(actJson.data);
+          if (actJson.data) updateActivitiesState(actJson.data);
         }
       }
     } catch (err) {
