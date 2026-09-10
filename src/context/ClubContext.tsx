@@ -104,10 +104,9 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
   };
 
-  // Safe merge logic to preserve locally added fighters across serverless cold starts
+  // Server-authoritative sync to mirror additions, edits, and deletions in real-time across all PCs & devices
   const refreshData = useCallback(async () => {
     try {
-      setIsLoading(true);
       const [membersRes, activitiesRes, eventsRes] = await Promise.all([
         fetch('/api/members').catch(() => null),
         fetch('/api/activities').catch(() => null),
@@ -117,71 +116,29 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (membersRes && membersRes.ok) {
         const json = await membersRes.json();
         if (json.success && Array.isArray(json.data)) {
-          let localMembers: Member[] = [];
-          try {
-            const raw = localStorage.getItem(STORAGE_KEY_MEMBERS);
-            if (raw) localMembers = JSON.parse(raw);
-          } catch {}
-
-          const memberMap = new Map<string, Member>();
-          INITIAL_MEMBERS.forEach((m) => memberMap.set(m.id, m));
-          json.data.forEach((m: Member) => memberMap.set(m.id, m));
-          localMembers.forEach((m: Member) => memberMap.set(m.id, m));
-
-          const merged = Array.from(memberMap.values());
-          if (merged.length > 0) {
-            persistMembers(merged);
-          }
+          persistMembers(json.data);
         }
       }
 
       if (activitiesRes && activitiesRes.ok) {
         const json = await activitiesRes.json();
         if (json.success && Array.isArray(json.data)) {
-          let localAct: ActivityLog[] = [];
-          try {
-            const raw = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
-            if (raw) localAct = JSON.parse(raw);
-          } catch {}
-
-          const actMap = new Map<string, ActivityLog>();
-          INITIAL_ACTIVITIES.forEach((a) => actMap.set(a.id, a));
-          json.data.forEach((a: ActivityLog) => actMap.set(a.id, a));
-          localAct.forEach((a: ActivityLog) => actMap.set(a.id, a));
-
-          const mergedAct = Array.from(actMap.values()).sort(
-            (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-          );
-          persistActivities(mergedAct);
+          persistActivities(json.data);
         }
       }
 
       if (eventsRes && eventsRes.ok) {
         const json = await eventsRes.json();
         if (json.success && Array.isArray(json.data)) {
-          let localEvt: ClubEvent[] = [];
-          try {
-            const raw = localStorage.getItem(STORAGE_KEY_EVENTS);
-            if (raw) localEvt = JSON.parse(raw);
-          } catch {}
-
-          const evtMap = new Map<string, ClubEvent>();
-          INITIAL_EVENTS.forEach((e) => evtMap.set(e.id, e));
-          json.data.forEach((e: ClubEvent) => evtMap.set(e.id, e));
-          localEvt.forEach((e: ClubEvent) => evtMap.set(e.id, e));
-
-          const mergedEvt = Array.from(evtMap.values());
-          persistEvents(mergedEvt);
+          persistEvents(json.data);
         }
       }
     } catch (err) {
-      console.warn('Using client memory cache for embedded DB:', err);
-    } finally {
-      setIsLoading(false);
+      console.warn('Network sync warning:', err);
     }
   }, []);
 
-  // Hydrate on mount from local storage first
+  // Hydrate on mount from local storage first (instant response)
   useEffect(() => {
     try {
       const storedAuth = localStorage.getItem(STORAGE_KEY_AUTH);
@@ -191,72 +148,57 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthenticated(false);
       }
 
-      // Check current and legacy storage keys for members
-      let loadedMembers: Member[] | null = null;
-      for (const key of [STORAGE_KEY_MEMBERS, 'cfc_members', 'cfc_members_v1', 'ceylon_fc_members']) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              loadedMembers = parsed;
-              break;
-            }
-          } catch {}
-        }
-      }
-
-      if (loadedMembers && loadedMembers.length > 0) {
-        setMembers(loadedMembers);
-      } else {
-        setMembers(INITIAL_MEMBERS);
+      const rawMembers = localStorage.getItem(STORAGE_KEY_MEMBERS);
+      if (rawMembers) {
         try {
-          localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(INITIAL_MEMBERS));
+          const parsed = JSON.parse(rawMembers);
+          if (Array.isArray(parsed)) {
+            setMembers(parsed);
+          }
         } catch {}
       }
 
-      // Activities
-      let loadedActivities: ActivityLog[] | null = null;
-      for (const key of [STORAGE_KEY_ACTIVITIES, 'cfc_activities', 'cfc_activities_v1']) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              loadedActivities = parsed;
-              break;
-            }
-          } catch {}
-        }
-      }
-      if (loadedActivities && loadedActivities.length > 0) {
-        setActivities(loadedActivities);
-      } else {
-        setActivities(INITIAL_ACTIVITIES);
+      const rawAct = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
+      if (rawAct) {
+        try {
+          const parsed = JSON.parse(rawAct);
+          if (Array.isArray(parsed)) {
+            setActivities(parsed);
+          }
+        } catch {}
       }
 
-      // Events
-      let loadedEvents: ClubEvent[] | null = null;
-      for (const key of [STORAGE_KEY_EVENTS, 'cfc_events', 'cfc_events_v1']) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              loadedEvents = parsed;
-              break;
-            }
-          } catch {}
-        }
-      }
-      if (loadedEvents && loadedEvents.length > 0) {
-        setEvents(loadedEvents);
-      } else {
-        setEvents(INITIAL_EVENTS);
+      const rawEvt = localStorage.getItem(STORAGE_KEY_EVENTS);
+      if (rawEvt) {
+        try {
+          const parsed = JSON.parse(rawEvt);
+          if (Array.isArray(parsed)) {
+            setEvents(parsed);
+          }
+        } catch {}
       }
     } catch {}
 
     refreshData();
+  }, [refreshData]);
+
+  // Real-time background sync: Auto-refreshes data when window gets focus or every 4 seconds
+  useEffect(() => {
+    const handleSync = () => {
+      refreshData();
+    };
+
+    window.addEventListener('focus', handleSync);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') handleSync();
+    });
+
+    const interval = setInterval(handleSync, 4000);
+
+    return () => {
+      window.removeEventListener('focus', handleSync);
+      clearInterval(interval);
+    };
   }, [refreshData]);
 
   // Dynamic Dashboard Stats Calculation
@@ -288,7 +230,6 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const registerMember = async (
     data: Omit<Member, 'id' | 'registrationFee' | 'attendanceCount' | 'sparringRecord' | 'weightClass'>
   ): Promise<Member | void> => {
-    // Generate unique ID based on ALL known members in state
     const maxNum = members.reduce((acc, m) => {
       const match = m.id.match(/CFC-(\d+)/);
       if (match) {
@@ -309,9 +250,8 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sparringRecord: { wins: 0, losses: 0, draws: 0 },
     };
 
-    // 1. Immediately persist locally (zero data loss across Vercel serverless requests)
-    const updatedMembers = [newMember, ...members.filter((m) => m.id !== newId)];
-    persistMembers(updatedMembers);
+    // 1. Optimistic local update
+    persistMembers([newMember, ...members.filter((m) => m.id !== newId)]);
 
     const newActivity: ActivityLog = {
       id: `act-${Date.now()}`,
@@ -338,22 +278,23 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch {}
 
-    // 2. Best-effort async sync to API backend
+    // 2. Sync to API backend and refresh
     try {
       await fetch('/api/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newMember),
       });
+      await refreshData();
     } catch (err) {
-      console.warn('API sync warning (persisted in local store):', err);
+      console.warn('API sync warning:', err);
     }
 
     return newMember;
   };
 
   const updateMember = async (id: string, updatedData: Partial<Member>) => {
-    // Immediate state & local storage update
+    // 1. Optimistic update
     const newMembers = members.map((m) => {
       if (m.id === id) {
         const updated = { ...m, ...updatedData };
@@ -382,13 +323,14 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     showToast(`Fighter record updated successfully.`, 'info');
 
-    // Async backend update
+    // 2. Backend update and refresh
     try {
       await fetch(`/api/members/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedData),
       });
+      await refreshData();
     } catch (err) {
       console.warn('API update warning:', err);
     }
@@ -398,7 +340,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const targetMember = members.find((m) => m.id === id);
     if (!targetMember) return;
 
-    // Immediate state & local storage update
+    // 1. Optimistic delete
     const newMembers = members.filter((m) => m.id !== id);
     persistMembers(newMembers);
 
@@ -418,11 +360,12 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       'warning'
     );
 
-    // Async backend delete
+    // 2. Server delete and refresh
     try {
       await fetch(`/api/members/${id}`, {
         method: 'DELETE',
       });
+      await refreshData();
     } catch (err) {
       console.warn('API delete warning:', err);
     }
@@ -442,7 +385,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: `evt-${Date.now()}`,
     };
 
-    // 1. Immediate state & local storage update
+    // 1. Optimistic local update
     persistEvents([newEvent, ...events]);
 
     const newActivity: ActivityLog = {
@@ -456,13 +399,14 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     showToast(`Combat event "${eventData.title}" saved to calendar.`, 'success');
 
-    // 2. Async backend save
+    // 2. Server save and refresh
     try {
       await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newEvent),
       });
+      await refreshData();
     } catch (err) {
       console.warn('API event sync warning:', err);
     }
@@ -472,7 +416,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const target = events.find((e) => e.id === id);
     if (!target) return;
 
-    // 1. Immediate state & local storage update
+    // 1. Optimistic delete
     const newEvents = events.filter((e) => e.id !== id);
     persistEvents(newEvents);
 
@@ -487,11 +431,12 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     showToast(`Combat event "${target.title}" deleted from calendar.`, 'info');
 
-    // 2. Async backend delete
+    // 2. Server delete and refresh
     try {
       await fetch(`/api/events/${id}`, {
         method: 'DELETE',
       });
+      await refreshData();
     } catch (err) {
       console.warn('API event delete warning:', err);
     }
@@ -542,6 +487,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       await fetch('/api/reset', { method: 'POST' });
+      await refreshData();
     } catch (err) {
       console.warn('Reset API warning:', err);
     }
@@ -562,6 +508,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       await fetch('/api/members', { method: 'DELETE' });
+      await refreshData();
     } catch (err) {
       console.warn('Clear members API warning:', err);
     }
