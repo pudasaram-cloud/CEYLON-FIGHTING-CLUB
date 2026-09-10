@@ -47,7 +47,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [activities, setActivities] = useState<ActivityLog[]>(INITIAL_ACTIVITIES);
   const [events, setEvents] = useState<ClubEvent[]>(INITIAL_EVENTS);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -168,8 +168,10 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     try {
       const storedAuth = localStorage.getItem(STORAGE_KEY_AUTH);
-      if (storedAuth !== null) {
-        setIsAuthenticated(storedAuth === 'true');
+      if (storedAuth === 'true') {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
       }
 
       const storedMembers = localStorage.getItem(STORAGE_KEY_MEMBERS);
