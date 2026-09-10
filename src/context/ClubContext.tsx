@@ -104,7 +104,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
   };
 
-  // Rock-solid non-flickering sync logic
+  // Rock-solid sync logic
   const refreshData = useCallback(async () => {
     try {
       const [membersRes, activitiesRes, eventsRes] = await Promise.all([
@@ -115,21 +115,21 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (membersRes && membersRes.ok) {
         const json = await membersRes.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.success && Array.isArray(json.data)) {
           persistMembers(json.data);
         }
       }
 
       if (activitiesRes && activitiesRes.ok) {
         const json = await activitiesRes.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.success && Array.isArray(json.data)) {
           persistActivities(json.data);
         }
       }
 
       if (eventsRes && eventsRes.ok) {
         const json = await eventsRes.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.success && Array.isArray(json.data)) {
           persistEvents(json.data);
         }
       }
@@ -138,7 +138,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Hydrate on mount from local storage first (instant response, zero flicker)
+  // Hydrate on mount from local storage first (instant response, zero flicker, correctly supports empty arrays)
   useEffect(() => {
     try {
       const storedAuth = localStorage.getItem(STORAGE_KEY_AUTH);
@@ -149,33 +149,42 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const rawMembers = localStorage.getItem(STORAGE_KEY_MEMBERS);
-      if (rawMembers) {
+      if (rawMembers !== null) {
         try {
           const parsed = JSON.parse(rawMembers);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setMembers(parsed);
           }
+        } catch {}
+      } else {
+        setMembers(INITIAL_MEMBERS);
+        try {
+          localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(INITIAL_MEMBERS));
         } catch {}
       }
 
       const rawAct = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
-      if (rawAct) {
+      if (rawAct !== null) {
         try {
           const parsed = JSON.parse(rawAct);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setActivities(parsed);
           }
         } catch {}
+      } else {
+        setActivities(INITIAL_ACTIVITIES);
       }
 
       const rawEvt = localStorage.getItem(STORAGE_KEY_EVENTS);
-      if (rawEvt) {
+      if (rawEvt !== null) {
         try {
           const parsed = JSON.parse(rawEvt);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setEvents(parsed);
           }
         } catch {}
+      } else {
+        setEvents(INITIAL_EVENTS);
       }
     } catch {}
 
