@@ -2,7 +2,12 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
+  apiKey: "AIzaSyBhMS-OjZBgHRR5cXNHD_0Kne2vOQTtUT4",
+  authDomain: "ceylon-fighting-club.firebaseapp.com",
   projectId: "ceylon-fighting-club",
+  storageBucket: "ceylon-fighting-club.firebasestorage.app",
+  messagingSenderId: "803556380178",
+  appId: "1:803556380178:web:47f82b9c3f4cc1e93c52cb",
 };
 
 const app = initializeApp(firebaseConfig);
