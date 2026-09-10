@@ -1,14 +1,53 @@
 import { Member, ActivityLog, ClubEvent } from '@/types';
 
-export const INITIAL_MEMBERS: Member[] = [];
+export const INITIAL_MEMBERS: Member[] = [
+  {
+    id: 'CFC-1001',
+    idNumber: '200432201685',
+    fullName: 'Benny Falcon',
+    age: 24,
+    dateOfBirth: '2002-05-15',
+    gender: 'Male',
+    phoneNumber: '+94701095008',
+    email: 'mpudasara@gmail.com',
+    address: 'Colombo, Sri Lanka',
+    weight: 70,
+    height: 175,
+    weightClass: 'Lightweight (66-70kg)',
+    discipline: 'MMA',
+    skillLevel: 'Intermediate',
+    beltRank: 'Blue Belt',
+    registrationDate: '2026-09-10',
+    registrationFee: 1500,
+    paymentStatus: 'Paid',
+    membershipStatus: 'Active',
+    defaultAvatarType: 'male-vector',
+    emergencyContact: {
+      name: 'Family Contact',
+      phone: '+94701095008',
+      relationship: 'Parent',
+    },
+    attendanceCount: 1,
+    sparringRecord: { wins: 0, losses: 0, draws: 0 },
+  },
+];
 
 export const INITIAL_ACTIVITIES: ActivityLog[] = [
   {
     id: 'act-init-01',
     type: 'system',
     title: 'Ceylon FC System Online',
-    description: 'Dojo athlete database initialized. Ready for fighter admissions starting with ID CFC-001.',
+    description: 'Dojo athlete database initialized. Ready for fighter admissions starting with ID CFC-1001.',
     timestamp: new Date().toISOString(),
+  },
+  {
+    id: 'act-init-02',
+    type: 'registration',
+    title: 'New Member Registered',
+    description: 'Benny Falcon registered as Lightweight (MMA). LKR 1,500 fee added.',
+    timestamp: '2026-09-10T10:30:00.000Z',
+    memberId: 'CFC-1001',
+    memberName: 'Benny Falcon',
   },
 ];
 

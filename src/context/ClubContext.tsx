@@ -110,13 +110,15 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (raw) localMembers = JSON.parse(raw);
           } catch {}
 
-          // Create map starting with server data, then override/append local data so user records are never lost
           const memberMap = new Map<string, Member>();
+          INITIAL_MEMBERS.forEach((m) => memberMap.set(m.id, m));
           json.data.forEach((m: Member) => memberMap.set(m.id, m));
           localMembers.forEach((m: Member) => memberMap.set(m.id, m));
 
           const merged = Array.from(memberMap.values());
-          persistMembers(merged);
+          if (merged.length > 0) {
+            persistMembers(merged);
+          }
         }
       }
 
@@ -130,6 +132,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch {}
 
           const actMap = new Map<string, ActivityLog>();
+          INITIAL_ACTIVITIES.forEach((a) => actMap.set(a.id, a));
           json.data.forEach((a: ActivityLog) => actMap.set(a.id, a));
           localAct.forEach((a: ActivityLog) => actMap.set(a.id, a));
 
@@ -150,6 +153,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch {}
 
           const evtMap = new Map<string, ClubEvent>();
+          INITIAL_EVENTS.forEach((e) => evtMap.set(e.id, e));
           json.data.forEach((e: ClubEvent) => evtMap.set(e.id, e));
           localEvt.forEach((e: ClubEvent) => evtMap.set(e.id, e));
 
@@ -164,7 +168,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Hydrate on mount from local storage first (instant response)
+  // Hydrate on mount from local storage first
   useEffect(() => {
     try {
       const storedAuth = localStorage.getItem(STORAGE_KEY_AUTH);
@@ -174,28 +178,68 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthenticated(false);
       }
 
-      const storedMembers = localStorage.getItem(STORAGE_KEY_MEMBERS);
-      if (storedMembers) {
-        const parsed = JSON.parse(storedMembers);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMembers(parsed);
+      // Check current and legacy storage keys for members
+      let loadedMembers: Member[] | null = null;
+      for (const key of [STORAGE_KEY_MEMBERS, 'cfc_members', 'cfc_members_v1', 'ceylon_fc_members']) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              loadedMembers = parsed;
+              break;
+            }
+          } catch {}
         }
       }
 
-      const storedActivities = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
-      if (storedActivities) {
-        const parsed = JSON.parse(storedActivities);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setActivities(parsed);
-        }
+      if (loadedMembers && loadedMembers.length > 0) {
+        setMembers(loadedMembers);
+      } else {
+        setMembers(INITIAL_MEMBERS);
+        try {
+          localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(INITIAL_MEMBERS));
+        } catch {}
       }
 
-      const storedEvents = localStorage.getItem(STORAGE_KEY_EVENTS);
-      if (storedEvents) {
-        const parsed = JSON.parse(storedEvents);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setEvents(parsed);
+      // Activities
+      let loadedActivities: ActivityLog[] | null = null;
+      for (const key of [STORAGE_KEY_ACTIVITIES, 'cfc_activities', 'cfc_activities_v1']) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              loadedActivities = parsed;
+              break;
+            }
+          } catch {}
         }
+      }
+      if (loadedActivities && loadedActivities.length > 0) {
+        setActivities(loadedActivities);
+      } else {
+        setActivities(INITIAL_ACTIVITIES);
+      }
+
+      // Events
+      let loadedEvents: ClubEvent[] | null = null;
+      for (const key of [STORAGE_KEY_EVENTS, 'cfc_events', 'cfc_events_v1']) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              loadedEvents = parsed;
+              break;
+            }
+          } catch {}
+        }
+      }
+      if (loadedEvents && loadedEvents.length > 0) {
+        setEvents(loadedEvents);
+      } else {
+        setEvents(INITIAL_EVENTS);
       }
     } catch {}
 
