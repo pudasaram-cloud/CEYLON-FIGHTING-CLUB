@@ -14,6 +14,7 @@ import {
   Upload,
   Database,
   Cloud,
+  Flame,
 } from 'lucide-react';
 
 export const SettingsSection: React.FC = () => {
@@ -46,31 +47,38 @@ export const SettingsSection: React.FC = () => {
           </h1>
         </div>
         <p className="text-xs text-slate-400 mt-1">
-          Configure membership fee standards, data backups, club parameters, and roster controls
+          Configure Firebase Cloud Firestore database, membership fee standards, backups, and roster controls
         </p>
       </div>
 
-      {/* 1. Database Backup & Restore */}
+      {/* 1. Firebase Cloud Database Status & Backup */}
       <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-950 to-blue-950/40 border border-blue-500/30 shadow-xl space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-            <Database className="w-5 h-5" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400">
+              <Flame className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                Google Cloud Firebase Firestore
+              </h3>
+              <p className="text-xs text-slate-400">
+                Project ID: <code className="text-blue-400 font-mono">ceylon-fighting-club</code> • Real-time Cross-Device Sync
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-black uppercase tracking-wider text-white">
-              Data Backup & Roster Recovery
-            </h3>
-            <p className="text-xs text-slate-400">
-              Download or restore your complete fighters roster, events, and accounting records
-            </p>
-          </div>
+
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/70 border border-emerald-500/40 text-emerald-400 text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Cloud Active
+          </span>
         </div>
 
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
           <div className="flex items-start gap-2.5 text-xs text-slate-300">
             <Cloud className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              <strong>Data Safety:</strong> Your fighters ({stats.totalMembers} members) and scheduled events are stored in your secure browser repository. You can download an offline <strong>JSON Backup file</strong> anytime to keep a permanent master copy on your phone or computer.
+              <strong>Live Cloud Persistence:</strong> All {stats.totalMembers} fighters and scheduled events are stored in Google Cloud Firestore. Any change made from any PC or mobile phone is automatically synced in real time without refreshing or losing data when clearing browser history.
             </p>
           </div>
 
@@ -80,7 +88,7 @@ export const SettingsSection: React.FC = () => {
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-95"
             >
               <Download className="w-4 h-4" />
-              <span>Download Backup File (.json)</span>
+              <span>Download Cloud Backup (.json)</span>
             </button>
 
             <button
@@ -88,7 +96,7 @@ export const SettingsSection: React.FC = () => {
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-95"
             >
               <Upload className="w-4 h-4 text-blue-400" />
-              <span>Restore from Backup File</span>
+              <span>Restore Backup to Cloud</span>
             </button>
             <input
               type="file"
@@ -239,16 +247,16 @@ export const SettingsSection: React.FC = () => {
       <div className="p-6 rounded-2xl bg-slate-950/80 border border-slate-800 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-sm font-black uppercase tracking-wider text-rose-400">
-            Clear Member Roster
+            Clear Cloud Roster
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Wipe all member records from the database to start fresh ({stats.totalMembers} fighters currently registered)
+            Wipe all member records from Firebase Firestore to start fresh ({stats.totalMembers} fighters currently registered)
           </p>
         </div>
 
         <button
           onClick={() => {
-            if (window.confirm('Are you sure you want to remove all members? This will reset the roster to 0 members.')) {
+            if (window.confirm('Are you sure you want to remove all members from Firebase? This will reset the roster to 0 members.')) {
               clearAllMembers();
             }
           }}
@@ -266,7 +274,7 @@ export const SettingsSection: React.FC = () => {
             System Reset
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Reset embedded database and system activities to clean initial state
+            Reset Firebase database collections to initial clean demo state
           </p>
         </div>
 
@@ -275,7 +283,7 @@ export const SettingsSection: React.FC = () => {
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-blue-500/50 hover:bg-slate-800 text-slate-200 hover:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer self-start sm:self-auto"
         >
           <RotateCcw className="w-4 h-4 text-blue-400" />
-          <span>Reset System Data</span>
+          <span>Reset Cloud Data</span>
         </button>
       </div>
     </div>

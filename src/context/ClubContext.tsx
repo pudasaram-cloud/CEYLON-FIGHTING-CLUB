@@ -5,6 +5,20 @@ import confetti from 'canvas-confetti';
 import { Member, ActivityLog, ClubEvent, DashboardStats } from '@/types';
 import { INITIAL_MEMBERS, INITIAL_ACTIVITIES, INITIAL_EVENTS } from '@/data/initialData';
 import { calculateWeightClass } from '@/utils/helpers';
+import {
+  subscribeToMembers,
+  subscribeToEvents,
+  subscribeToActivities,
+  saveMemberToFirestore,
+  updateMemberInFirestore,
+  deleteMemberFromFirestore,
+  saveEventToFirestore,
+  deleteEventFromFirestore,
+  saveActivityToFirestore,
+  resetFirestoreDatabase,
+  clearAllMembersFromFirestore,
+  seedFirestoreIfEmpty,
+} from '@/lib/firestoreService';
 
 interface ToastNotification {
   id: string;
@@ -41,9 +55,9 @@ interface ClubContextType {
 const ClubContext = createContext<ClubContextType | undefined>(undefined);
 
 const STORAGE_KEY_AUTH = 'cfc_auth_session_v1';
-const STORAGE_KEY_MEMBERS = 'cfc_members_v2';
-const STORAGE_KEY_ACTIVITIES = 'cfc_activities_v2';
-const STORAGE_KEY_EVENTS = 'cfc_events_v2';
+const STORAGE_KEY_MEMBERS = 'cfc_members_v3';
+const STORAGE_KEY_ACTIVITIES = 'cfc_activities_v3';
+const STORAGE_KEY_EVENTS = 'cfc_events_v3';
 
 export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
@@ -51,7 +65,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [events, setEvents] = useState<ClubEvent[]>(INITIAL_EVENTS);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const currentAdmin = {
     name: 'Ceylon Fighting Admin',
@@ -71,75 +85,9 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Sync helpers to localStorage with quota-safe protection
-  const persistMembers = (newMembers: Member[]) => {
-    setMembers(newMembers);
-    try {
-      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(newMembers));
-    } catch (err) {
-      console.warn('LocalStorage save quota exceeded, pruning heavy photo assets to guarantee data persistence:', err);
-      try {
-        const pruned = newMembers.map((m) => ({
-          ...m,
-          photoUrl: m.photoUrl && m.photoUrl.length > 50000 ? undefined : m.photoUrl,
-        }));
-        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(pruned));
-      } catch (err2) {
-        console.error('LocalStorage critical error:', err2);
-      }
-    }
-  };
-
-  const persistActivities = (newActivities: ActivityLog[]) => {
-    setActivities(newActivities);
-    try {
-      localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(newActivities));
-    } catch {}
-  };
-
-  const persistEvents = (newEvents: ClubEvent[]) => {
-    setEvents(newEvents);
-    try {
-      localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(newEvents));
-    } catch {}
-  };
-
-  // Rock-solid sync logic
-  const refreshData = useCallback(async () => {
-    try {
-      const [membersRes, activitiesRes, eventsRes] = await Promise.all([
-        fetch('/api/members').catch(() => null),
-        fetch('/api/activities').catch(() => null),
-        fetch('/api/events').catch(() => null),
-      ]);
-
-      if (membersRes && membersRes.ok) {
-        const json = await membersRes.json();
-        if (json.success && Array.isArray(json.data)) {
-          persistMembers(json.data);
-        }
-      }
-
-      if (activitiesRes && activitiesRes.ok) {
-        const json = await activitiesRes.json();
-        if (json.success && Array.isArray(json.data)) {
-          persistActivities(json.data);
-        }
-      }
-
-      if (eventsRes && eventsRes.ok) {
-        const json = await eventsRes.json();
-        if (json.success && Array.isArray(json.data)) {
-          persistEvents(json.data);
-        }
-      }
-    } catch (err) {
-      console.warn('Network sync warning:', err);
-    }
-  }, []);
-
-  // Hydrate on mount from local storage first (instant response, zero flicker, correctly supports empty arrays)
+  // Real-time Firestore Subscriptions & Hydration
   useEffect(() => {
+    // 1. Authenticated session check
     try {
       const storedAuth = localStorage.getItem(STORAGE_KEY_AUTH);
       if (storedAuth === 'true') {
@@ -147,55 +95,76 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setIsAuthenticated(false);
       }
+    } catch {}
 
-      const rawMembers = localStorage.getItem(STORAGE_KEY_MEMBERS);
-      if (rawMembers !== null) {
-        try {
-          const parsed = JSON.parse(rawMembers);
-          if (Array.isArray(parsed)) {
-            setMembers(parsed);
-          }
-        } catch {}
-      } else {
-        setMembers(INITIAL_MEMBERS);
-        try {
-          localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(INITIAL_MEMBERS));
-        } catch {}
+    // 2. Load cached data from local storage for instant zero-lag rendering
+    try {
+      const cachedMembers = localStorage.getItem(STORAGE_KEY_MEMBERS);
+      if (cachedMembers) {
+        const parsed = JSON.parse(cachedMembers);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMembers(parsed);
+        }
       }
-
-      const rawAct = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
-      if (rawAct !== null) {
-        try {
-          const parsed = JSON.parse(rawAct);
-          if (Array.isArray(parsed)) {
-            setActivities(parsed);
-          }
-        } catch {}
-      } else {
-        setActivities(INITIAL_ACTIVITIES);
+      const cachedEvents = localStorage.getItem(STORAGE_KEY_EVENTS);
+      if (cachedEvents) {
+        const parsed = JSON.parse(cachedEvents);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setEvents(parsed);
+        }
       }
-
-      const rawEvt = localStorage.getItem(STORAGE_KEY_EVENTS);
-      if (rawEvt !== null) {
-        try {
-          const parsed = JSON.parse(rawEvt);
-          if (Array.isArray(parsed)) {
-            setEvents(parsed);
-          }
-        } catch {}
-      } else {
-        setEvents(INITIAL_EVENTS);
+      const cachedActs = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
+      if (cachedActs) {
+        const parsed = JSON.parse(cachedActs);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setActivities(parsed);
+        }
       }
     } catch {}
 
-    refreshData();
-  }, [refreshData]);
+    // 3. Initialize / Seed Firestore if it's completely empty
+    seedFirestoreIfEmpty().catch(() => {});
+
+    // 4. Attach real-time cloud listeners with instant cross-device synchronization
+    const unsubMembers = subscribeToMembers((cloudMembers) => {
+      setMembers(cloudMembers);
+      try {
+        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(cloudMembers));
+      } catch {}
+      setIsLoading(false);
+    });
+
+    const unsubEvents = subscribeToEvents((cloudEvents) => {
+      setEvents(cloudEvents);
+      try {
+        localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(cloudEvents));
+      } catch {}
+    });
+
+    const unsubActivities = subscribeToActivities((cloudActivities) => {
+      setActivities(cloudActivities);
+      try {
+        localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(cloudActivities));
+      } catch {}
+    });
+
+    return () => {
+      unsubMembers();
+      unsubEvents();
+      unsubActivities();
+    };
+  }, []);
+
+  const refreshData = useCallback(async () => {
+    // Realtime listeners automatically handle syncing; refreshData acts as fallback trigger
+    setIsLoading(false);
+  }, []);
 
   // Dynamic Dashboard Stats Calculation
   const totalMembers = members.length;
   const maleMembers = members.filter((m) => m.gender === 'Male').length;
   const femaleMembers = members.filter((m) => m.gender === 'Female').length;
-  // Exact requirement: Total Registered Members × LKR 1,500
+  // Total Registered Members × LKR 1,500
   const totalRevenue = totalMembers * 1500;
   const paidMembers = members.filter((m) => m.paymentStatus === 'Paid').length;
   const pendingPaymentMembers = members.filter((m) => m.paymentStatus === 'Pending').length;
@@ -213,10 +182,11 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     paidMembers,
     pendingPaymentMembers,
     activeMembers,
-    newThisMonth: Math.max(newThisMonth, 5),
+    newThisMonth: Math.max(newThisMonth, 1),
     upcomingEventsCount,
   };
 
+  // Register Member -> Stored in Firebase Firestore
   const registerMember = async (
     data: Omit<Member, 'id' | 'registrationFee' | 'attendanceCount' | 'sparringRecord' | 'weightClass'>
   ): Promise<Member | void> => {
@@ -240,8 +210,8 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sparringRecord: { wins: 0, losses: 0, draws: 0 },
     };
 
-    // 1. Permanent immediate local update
-    persistMembers([newMember, ...members.filter((m) => m.id !== newId)]);
+    // Optimistic local state update
+    setMembers((prev) => [newMember, ...prev.filter((m) => m.id !== newId)]);
 
     const newActivity: ActivityLog = {
       id: `act-${Date.now()}`,
@@ -252,10 +222,10 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       memberId: newId,
       memberName: newMember.fullName,
     };
-    persistActivities([newActivity, ...activities]);
+    setActivities((prev) => [newActivity, ...prev]);
 
     showToast(
-      `Champion registered! ${data.fullName} stored in database. (Total Revenue +LKR 1,500)`,
+      `Champion registered! ${data.fullName} saved to Firebase Firestore. (Total Revenue +LKR 1,500)`,
       'success'
     );
 
@@ -268,69 +238,64 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch {}
 
-    // 2. Sync to API backend
+    // Cloud Database Persistence
     try {
-      await fetch('/api/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newMember),
-      });
+      await saveMemberToFirestore(newMember);
+      await saveActivityToFirestore(newActivity);
     } catch (err) {
-      console.warn('API sync warning:', err);
+      console.error('Firestore save error:', err);
     }
 
     return newMember;
   };
 
+  // Update Member in Firebase Firestore
   const updateMember = async (id: string, updatedData: Partial<Member>) => {
-    // 1. Immediate local update
-    const newMembers = members.map((m) => {
-      if (m.id === id) {
-        const updated = { ...m, ...updatedData };
-        if (updatedData.weight) {
-          updated.weightClass = calculateWeightClass(updatedData.weight);
+    let targetMember: Member | undefined;
+    setMembers((prev) =>
+      prev.map((m) => {
+        if (m.id === id) {
+          const updated = { ...m, ...updatedData };
+          if (updatedData.weight) {
+            updated.weightClass = calculateWeightClass(updatedData.weight);
+          }
+          targetMember = updated;
+          return updated;
         }
-        return updated;
-      }
-      return m;
-    });
-    persistMembers(newMembers);
+        return m;
+      })
+    );
 
-    const targetMember = newMembers.find((m) => m.id === id);
     if (targetMember) {
       const updateActivity: ActivityLog = {
         id: `act-${Date.now()}`,
         type: 'update',
         title: 'Member Profile Updated',
-        description: `Updated fighter record and details for ${targetMember.fullName}.`,
+        description: `Updated fighter record and details for ${(targetMember as Member).fullName}.`,
         timestamp: new Date().toISOString(),
         memberId: id,
-        memberName: targetMember.fullName,
+        memberName: (targetMember as Member).fullName,
       };
-      persistActivities([updateActivity, ...activities]);
+      setActivities((prev) => [updateActivity, ...prev]);
+      saveActivityToFirestore(updateActivity).catch(() => {});
     }
 
-    showToast(`Fighter record updated successfully.`, 'info');
+    showToast(`Fighter record updated in Firebase database.`, 'info');
 
-    // 2. Backend update
     try {
-      await fetch(`/api/members/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedData),
-      });
+      await updateMemberInFirestore(id, updatedData);
     } catch (err) {
-      console.warn('API update warning:', err);
+      console.error('Firestore update error:', err);
     }
   };
 
+  // Delete Member from Firebase Firestore
   const deleteMember = async (id: string) => {
     const targetMember = members.find((m) => m.id === id);
     if (!targetMember) return;
 
-    // 1. Immediate local delete
-    const newMembers = members.filter((m) => m.id !== id);
-    persistMembers(newMembers);
+    // Optimistic delete
+    setMembers((prev) => prev.filter((m) => m.id !== id));
 
     const deleteActivity: ActivityLog = {
       id: `act-${Date.now()}`,
@@ -341,23 +306,22 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       memberId: id,
       memberName: targetMember.fullName,
     };
-    persistActivities([deleteActivity, ...activities]);
+    setActivities((prev) => [deleteActivity, ...prev]);
 
     showToast(
       `Member ${targetMember.fullName} deleted. Total Revenue recalculated (-LKR 1,500).`,
       'warning'
     );
 
-    // 2. Server delete
     try {
-      await fetch(`/api/members/${id}`, {
-        method: 'DELETE',
-      });
+      await deleteMemberFromFirestore(id);
+      await saveActivityToFirestore(deleteActivity);
     } catch (err) {
-      console.warn('API delete warning:', err);
+      console.error('Firestore delete error:', err);
     }
   };
 
+  // Toggle Payment Status
   const togglePaymentStatus = async (id: string) => {
     const member = members.find((m) => m.id === id);
     if (!member) return;
@@ -366,14 +330,14 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await updateMember(id, { paymentStatus: newStatus });
   };
 
+  // Add Combat Event -> Stored in Firestore
   const addClubEvent = async (eventData: Omit<ClubEvent, 'id'>) => {
     const newEvent: ClubEvent = {
       ...eventData,
       id: `evt-${Date.now()}`,
     };
 
-    // 1. Immediate local update
-    persistEvents([newEvent, ...events]);
+    setEvents((prev) => [newEvent, ...prev]);
 
     const newActivity: ActivityLog = {
       id: `act-${Date.now()}`,
@@ -382,29 +346,24 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       description: `Scheduled "${newEvent.title}" on ${newEvent.date}.`,
       timestamp: new Date().toISOString(),
     };
-    persistActivities([newActivity, ...activities]);
+    setActivities((prev) => [newActivity, ...prev]);
 
-    showToast(`Combat event "${eventData.title}" saved to calendar.`, 'success');
+    showToast(`Combat event "${eventData.title}" scheduled and saved to Firebase.`, 'success');
 
-    // 2. Server save
     try {
-      await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newEvent),
-      });
+      await saveEventToFirestore(newEvent);
+      await saveActivityToFirestore(newActivity);
     } catch (err) {
-      console.warn('API event sync warning:', err);
+      console.error('Firestore event error:', err);
     }
   };
 
+  // Delete Combat Event from Firestore
   const deleteClubEvent = async (id: string) => {
     const target = events.find((e) => e.id === id);
     if (!target) return;
 
-    // 1. Immediate local delete
-    const newEvents = events.filter((e) => e.id !== id);
-    persistEvents(newEvents);
+    setEvents((prev) => prev.filter((e) => e.id !== id));
 
     const deleteActivity: ActivityLog = {
       id: `act-${Date.now()}`,
@@ -413,23 +372,22 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       description: `Removed scheduled event "${target.title}" from calendar.`,
       timestamp: new Date().toISOString(),
     };
-    persistActivities([deleteActivity, ...activities]);
+    setActivities((prev) => [deleteActivity, ...prev]);
 
     showToast(`Combat event "${target.title}" deleted from calendar.`, 'info');
 
-    // 2. Server delete
     try {
-      await fetch(`/api/events/${id}`, {
-        method: 'DELETE',
-      });
+      await deleteEventFromFirestore(id);
+      await saveActivityToFirestore(deleteActivity);
     } catch (err) {
-      console.warn('API event delete warning:', err);
+      console.error('Firestore event delete error:', err);
     }
   };
 
+  // Export JSON Backup
   const exportBackupData = () => {
     const backup = {
-      version: '1.0',
+      version: '2.0-firebase',
       exportedAt: new Date().toISOString(),
       club: 'CEYLON FIGHTING CLUB',
       members,
@@ -440,20 +398,33 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ceylon_fc_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `ceylon_fc_firebase_backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('Database backup downloaded successfully.', 'success');
   };
 
+  // Import JSON Backup to Firestore
   const importBackupData = (jsonString: string): boolean => {
     try {
       const data = JSON.parse(jsonString);
       if (data && Array.isArray(data.members)) {
-        persistMembers(data.members);
-        if (Array.isArray(data.activities)) persistActivities(data.activities);
-        if (Array.isArray(data.events)) persistEvents(data.events);
-        showToast(`Backup restored! ${data.members.length} members loaded.`, 'success');
+        setMembers(data.members);
+        if (Array.isArray(data.activities)) setActivities(data.activities);
+        if (Array.isArray(data.events)) setEvents(data.events);
+
+        (async () => {
+          for (const m of data.members) {
+            await saveMemberToFirestore(m).catch(() => {});
+          }
+          if (Array.isArray(data.events)) {
+            for (const e of data.events) {
+              await saveEventToFirestore(e).catch(() => {});
+            }
+          }
+        })();
+
+        showToast(`Backup restored! ${data.members.length} members synced to Firebase.`, 'success');
         return true;
       }
       showToast('Invalid backup file format.', 'error');
@@ -464,39 +435,43 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Reset Firestore Database to Initial Demo State
   const resetToDefaultData = async () => {
-    persistMembers(INITIAL_MEMBERS);
-    persistActivities(INITIAL_ACTIVITIES);
-    persistEvents(INITIAL_EVENTS);
-    showToast('Reset to default demo data.', 'info');
+    setMembers(INITIAL_MEMBERS);
+    setActivities(INITIAL_ACTIVITIES);
+    setEvents(INITIAL_EVENTS);
+    showToast('Firebase database reset to default demo data.', 'info');
 
     try {
-      await fetch('/api/reset', { method: 'POST' });
+      await resetFirestoreDatabase();
     } catch (err) {
-      console.warn('Reset API warning:', err);
+      console.error('Firestore reset error:', err);
     }
   };
 
+  // Clear All Members from Firestore
   const clearAllMembers = async () => {
-    persistMembers([]);
-    showToast('All member records cleared from database. Roster is empty.', 'info');
+    setMembers([]);
+    showToast('All member records removed from Firebase database. Roster is empty.', 'info');
 
     const clearActivity: ActivityLog = {
       id: `act-${Date.now()}`,
       type: 'deletion',
       title: 'Roster Cleared',
-      description: 'Administrator cleared all member records.',
+      description: 'Administrator cleared all member records from Firebase.',
       timestamp: new Date().toISOString(),
     };
-    persistActivities([clearActivity, ...activities]);
+    setActivities((prev) => [clearActivity, ...prev]);
 
     try {
-      await fetch('/api/members', { method: 'DELETE' });
+      await clearAllMembersFromFirestore();
+      await saveActivityToFirestore(clearActivity);
     } catch (err) {
-      console.warn('Clear members API warning:', err);
+      console.error('Firestore clear error:', err);
     }
   };
 
+  // Authentication Handlers
   const login = (email?: string, password?: string) => {
     setIsAuthenticated(true);
     try {

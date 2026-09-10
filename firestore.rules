@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow public read and write access for members, events, and activities
+    // (You can restrict this to authenticated users in Firebase Authentication if needed)
+    match /members/{memberId} {
+      allow read, write: if true;
+    }
+    match /events/{eventId} {
+      allow read, write: if true;
+    }
+    match /activities/{activityId} {
+      allow read, write: if true;
+    }
+  }
+}
