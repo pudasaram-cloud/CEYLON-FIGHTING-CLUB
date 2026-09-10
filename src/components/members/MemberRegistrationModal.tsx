@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useClub } from '@/context/ClubContext';
 import { Gender, Discipline, SkillLevel, PaymentStatus, VectorAvatarType } from '@/types';
-import { calculateWeightClass, formatLKR } from '@/utils/helpers';
+import { calculateWeightClass, formatLKR, compressImage } from '@/utils/helpers';
 import {
   CombatAvatar,
   MaleFighterVector,
@@ -78,16 +78,22 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
     }
   };
 
-  // Handle custom image file upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle custom image file upload (auto-compressed to ~15KB)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoUrl(reader.result as string);
+      try {
+        const compressed = await compressImage(file, 250, 250, 0.75);
+        setPhotoUrl(compressed);
         setAvatarMode('upload');
-      };
-      reader.readAsDataURL(file);
+      } catch {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPhotoUrl(reader.result as string);
+          setAvatarMode('upload');
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 

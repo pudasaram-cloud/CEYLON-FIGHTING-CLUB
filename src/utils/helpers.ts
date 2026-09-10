@@ -40,3 +40,59 @@ export function getRelativeTime(timestamp: string): string {
     return 'Recently';
   }
 }
+
+/**
+ * Resizes and compresses uploaded images to ~15KB so they never exceed browser LocalStorage quota.
+ */
+export function compressImage(
+  file: File,
+  maxWidth = 250,
+  maxHeight = 250,
+  quality = 0.75
+): Promise<string> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string || '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => resolve(event.target?.result as string);
+    };
+    reader.onerror = () => resolve('');
+  });
+}

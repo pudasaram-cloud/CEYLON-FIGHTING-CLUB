@@ -69,12 +69,23 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Sync helpers to localStorage
+  // Sync helpers to localStorage with quota-safe protection
   const persistMembers = (newMembers: Member[]) => {
     setMembers(newMembers);
     try {
       localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(newMembers));
-    } catch {}
+    } catch (err) {
+      console.warn('LocalStorage save quota exceeded, pruning heavy photo assets to guarantee data persistence:', err);
+      try {
+        const pruned = newMembers.map((m) => ({
+          ...m,
+          photoUrl: m.photoUrl && m.photoUrl.length > 50000 ? undefined : m.photoUrl,
+        }));
+        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(pruned));
+      } catch (err2) {
+        console.error('LocalStorage critical error:', err2);
+      }
+    }
   };
 
   const persistActivities = (newActivities: ActivityLog[]) => {
