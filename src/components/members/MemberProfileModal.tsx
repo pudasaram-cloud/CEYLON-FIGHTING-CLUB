@@ -178,7 +178,7 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
                     {member.id}
                   </span>
                   <span className="px-2.5 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-slate-300 text-xs font-semibold">
-                    NIC: {member.idNumber}
+                    Citizen ID: {member.idNumber}
                   </span>
                   <span
                     className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
@@ -251,14 +251,18 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
                   <Phone className="w-4 h-4 text-slate-500 shrink-0" />
                   <span>{member.phoneNumber}</span>
                 </div>
-                <div className="flex items-center gap-2.5 text-slate-300">
-                  <Mail className="w-4 h-4 text-slate-500 shrink-0" />
-                  <span className="truncate">{member.email}</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-slate-300">
-                  <MapPin className="w-4 h-4 text-slate-500 shrink-0" />
-                  <span>{member.address}</span>
-                </div>
+                {member.email && (
+                  <div className="flex items-center gap-2.5 text-slate-300">
+                    <Mail className="w-4 h-4 text-slate-500 shrink-0" />
+                    <span className="truncate">{member.email}</span>
+                  </div>
+                )}
+                {member.address && (
+                  <div className="flex items-center gap-2.5 text-slate-300">
+                    <MapPin className="w-4 h-4 text-slate-500 shrink-0" />
+                    <span>{member.address}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2.5 text-slate-300">
                   <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
                   <span>Registered on {member.registrationDate}</span>

@@ -39,15 +39,14 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
 }) => {
   const { registerMember } = useClub();
 
-  // Core Form Fields requested:
-  // nama (Full Name), id number (NIC), age, phone number, weight, height, payment paid or not, profile photo / default vector icon (men/women)
+  // Core Form Fields:
+  // Full Name, Citizen ID (alphanumeric letters & numbers), age, phone number, weight, height, payment status, avatar
   const [fullName, setFullName] = useState('');
   const [idNumber, setIdNumber] = useState('');
   const [age, setAge] = useState<number | ''>(24);
   const [dateOfBirth, setDateOfBirth] = useState('2002-05-15');
   const [gender, setGender] = useState<Gender>('Male');
   const [phoneNumber, setPhoneNumber] = useState('+94 ');
-  const [email, setEmail] = useState('');
   const [address, setAddress] = useState('Colombo, Sri Lanka');
 
   const [weight, setWeight] = useState<number | ''>(70);
@@ -106,12 +105,11 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
 
     registerMember({
       fullName,
-      idNumber: idNumber.trim() || `NIC-${Date.now().toString().slice(-8)}`,
+      idNumber: idNumber.trim() || `CIT-${Date.now().toString().slice(-8)}`,
       age: Number(age) || 22,
       dateOfBirth,
       gender,
       phoneNumber,
-      email: email.trim() || `${fullName.toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
       address,
       weight: Number(weight) || 70,
       height: Number(height) || 175,
@@ -360,7 +358,7 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
             </div>
           </div>
 
-          {/* Section 2: Personal Details (Nama, ID Number, Age, Phone Number, Gender) */}
+          {/* Section 2: Personal Details (Nama, Citizen ID, Age, Phone Number, Gender) */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-3 flex items-center gap-1.5">
               <User className="w-4 h-4" />
@@ -383,17 +381,17 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
                 />
               </div>
 
-              {/* ID Number (NIC / Passport) */}
+              {/* Citizen ID (Alphanumeric: letters & numbers) */}
               <div>
                 <label className="text-xs font-semibold text-slate-300 uppercase block mb-1">
-                  ID Number (NIC / National Identity Card) *
+                  Citizen ID *
                 </label>
                 <input
                   type="text"
                   required
                   value={idNumber}
                   onChange={(e) => setIdNumber(e.target.value)}
-                  placeholder="e.g. 200018402910 or 982145678V"
+                  placeholder="e.g. 200018402910, 982145678V, or CIT-8942A"
                   className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm focus:border-blue-500 focus:outline-none"
                 />
               </div>
@@ -447,7 +445,7 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
               </div>
 
               {/* Phone Number */}
-              <div>
+              <div className="sm:col-span-2">
                 <label className="text-xs font-semibold text-slate-300 uppercase block mb-1">
                   Phone Number *
                 </label>
@@ -457,20 +455,6 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="+94 77 123 4567"
-                  className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Email Address */}
-              <div>
-                <label className="text-xs font-semibold text-slate-300 uppercase block mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="fighter@gmail.com"
                   className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm focus:border-blue-500 focus:outline-none"
                 />
               </div>

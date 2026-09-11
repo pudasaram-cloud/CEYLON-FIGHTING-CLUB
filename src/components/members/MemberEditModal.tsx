@@ -121,13 +121,14 @@ export const MemberEditModal: React.FC<MemberEditModalProps> = ({
 
             <div>
               <label className="text-xs font-semibold text-slate-300 uppercase block mb-1">
-                ID Number (NIC)
+                Citizen ID *
               </label>
               <input
                 type="text"
                 required
                 value={idNumber}
                 onChange={(e) => setIdNumber(e.target.value)}
+                placeholder="e.g. 200018402910, 982145678V, or CIT-8942A"
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm focus:border-blue-500 focus:outline-none"
               />
             </div>

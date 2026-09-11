@@ -56,7 +56,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
           m.id.toLowerCase().includes(query) ||
           (m.idNumber && m.idNumber.toLowerCase().includes(query)) ||
           m.phoneNumber.toLowerCase().includes(query) ||
-          m.email.toLowerCase().includes(query) ||
+          (m.email && m.email.toLowerCase().includes(query)) ||
           m.discipline.toLowerCase().includes(query);
 
         const matchesGender =
@@ -82,7 +82,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
     const headers = [
       'Member ID',
       'Full Name',
-      'NIC/ID Number',
+      'Citizen ID',
       'Age',
       'Gender',
       'Phone',
@@ -104,7 +104,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
       m.age,
       m.gender,
       m.phoneNumber,
-      m.email,
+      m.email || '',
       m.weight,
       m.height,
       `"${m.weightClass}"`,
@@ -171,7 +171,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by Name, NIC, Member ID (e.g. CFC-1001), Phone, or Style..."
+              placeholder="Search by Name, Citizen ID, Member ID (e.g. CFC-1001), Phone, or Style..."
               className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs sm:text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all"
             />
           </div>
@@ -307,7 +307,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
               <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider text-[10px] font-bold border-b border-slate-800">
                 <tr>
                   <th className="py-3.5 px-4">Fighter</th>
-                  <th className="py-3.5 px-4">Member ID / NIC</th>
+                  <th className="py-3.5 px-4">Member ID / Citizen ID</th>
                   <th className="py-3.5 px-4">Gender & Age</th>
                   <th className="py-3.5 px-4">Division / Style</th>
                   <th className="py-3.5 px-4">Phone</th>
@@ -342,12 +342,12 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                       </div>
                     </td>
 
-                    {/* Member ID & NIC */}
+                    {/* Member ID & Citizen ID */}
                     <td className="py-3 px-4">
                       <div className="font-mono font-bold text-blue-400 text-xs">
                         {member.id}
                       </div>
-                      <div className="text-[10px] text-slate-500">
+                      <div className="text-[10px] text-slate-500 font-mono">
                         {member.idNumber}
                       </div>
                     </td>

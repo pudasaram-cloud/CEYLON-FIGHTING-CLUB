@@ -201,7 +201,7 @@ export const FighterAccessCard: React.FC<FighterAccessCardProps> = ({ member }) 
 
                 <div className="grid grid-cols-3 gap-2 text-[10px] bg-slate-950 border border-slate-800 rounded-xl p-2">
                   <div>
-                    <span className="text-slate-500 uppercase block font-bold text-[8px]">NIC / ID NO</span>
+                    <span className="text-slate-500 uppercase block font-bold text-[8px]">CITIZEN ID</span>
                     <span className="font-mono text-white font-bold truncate block">{member.idNumber}</span>
                   </div>
                   <div>
@@ -311,7 +311,7 @@ export const FighterAccessCard: React.FC<FighterAccessCardProps> = ({ member }) 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-2 text-left text-xs bg-slate-950 border border-slate-800 rounded-2xl p-3 my-2">
               <div>
-                <span className="text-[8px] uppercase font-bold text-slate-500 block">NIC / ID NO</span>
+                <span className="text-[8px] uppercase font-bold text-slate-500 block">CITIZEN ID</span>
                 <span className="font-mono text-white font-bold text-xs truncate block">{member.idNumber}</span>
               </div>
               <div>

@@ -30,14 +30,14 @@ export interface SparringRecord {
 
 export interface Member {
   id: string; // e.g. "CFC-1001"
-  idNumber: string; // NIC / National Identity Card (e.g. "200018402941" or "981245678V")
+  idNumber: string; // Citizen ID (e.g. "200018402941", "981245678V", "CIT-0012A" - letters and numbers)
   fullName: string; // nama
   age: number; // age
   dateOfBirth?: string;
   gender: Gender;
   phoneNumber: string; // phone number
-  email: string;
-  address: string;
+  email?: string;
+  address?: string;
   weight: number; // in kg
   height: number; // in cm
   weightClass: string; // e.g. "Flyweight", "Welterweight"
