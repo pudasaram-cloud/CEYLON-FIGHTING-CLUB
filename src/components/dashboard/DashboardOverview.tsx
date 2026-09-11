@@ -22,10 +22,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 animate-in fade-in slide-in-from-top-3 duration-500">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider">
+            {/* <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" /> */}
+            {/* <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider">
               Dojo Command Center
-            </span>
+            </span> */}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
             WELCOME TO <span className="text-blue-500">CEYLON FIGHTING</span> CLUB

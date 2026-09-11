@@ -177,9 +177,11 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
                   <span className="px-2.5 py-0.5 rounded-md bg-blue-600 text-white font-mono text-xs font-bold tracking-wider">
                     {member.id}
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-slate-300 text-xs font-semibold">
-                    Citizen ID: {member.idNumber}
-                  </span>
+                  {member.idNumber && (
+                    <span className="px-2.5 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-slate-300 text-xs font-semibold">
+                      Citizen ID: {member.idNumber}
+                    </span>
+                  )}
                   <span
                     className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
                       member.paymentStatus === 'Paid'

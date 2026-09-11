@@ -156,7 +156,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider shadow-md transition-all cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
-            <span>+ Register Fighter</span>
+            <span> Register Fighter</span>
           </button>
         </div>
       </div>
@@ -348,7 +348,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                         {member.id}
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono">
-                        {member.idNumber}
+                        {member.idNumber || '—'}
                       </div>
                     </td>
 

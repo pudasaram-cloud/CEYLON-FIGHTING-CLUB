@@ -30,7 +30,7 @@ export interface SparringRecord {
 
 export interface Member {
   id: string; // e.g. "CFC-1001"
-  idNumber: string; // Citizen ID (e.g. "200018402941", "981245678V", "CIT-0012A" - letters and numbers)
+  idNumber?: string; // Citizen ID (optional alphanumeric: letters & numbers)
   fullName: string; // nama
   age: number; // age
   dateOfBirth?: string;

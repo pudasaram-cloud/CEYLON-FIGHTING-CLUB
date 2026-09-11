@@ -105,7 +105,7 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
 
     registerMember({
       fullName,
-      idNumber: idNumber.trim() || `CIT-${Date.now().toString().slice(-8)}`,
+      idNumber: idNumber.trim(),
       age: Number(age) || 22,
       dateOfBirth,
       gender,
@@ -384,11 +384,10 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
               {/* Citizen ID (Alphanumeric: letters & numbers) */}
               <div>
                 <label className="text-xs font-semibold text-slate-300 uppercase block mb-1">
-                  Citizen ID *
+                  Citizen ID <span className="text-slate-500 font-normal lowercase">(optional)</span>
                 </label>
                 <input
                   type="text"
-                  required
                   value={idNumber}
                   onChange={(e) => setIdNumber(e.target.value)}
                   placeholder="e.g. 200018402910, 982145678V, or CIT-8942A"
