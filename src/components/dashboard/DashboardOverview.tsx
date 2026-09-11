@@ -41,7 +41,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all cursor-pointer self-start sm:self-auto shrink-0"
         >
           <UserPlus className="w-4 h-4" />
-          <span>+ Register Fighter</span>
+          <span>Register Fighter</span>
         </button>
       </div>
 
