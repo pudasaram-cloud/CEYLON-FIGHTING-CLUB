@@ -12,5 +12,12 @@ service cloud.firestore {
     match /activities/{activityId} {
       allow read, write: if true;
     }
+    match /matches/{matchId} {
+      allow read, write: if true;
+    }
+    match /bets/{betId} {
+      allow read, write: if true;
+    }
   }
 }
+

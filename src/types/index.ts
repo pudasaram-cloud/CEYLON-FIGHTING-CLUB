@@ -53,6 +53,7 @@ export interface Member {
   notes?: string;
   attendanceCount: number;
   sparringRecord: SparringRecord;
+  points?: number; // Accumulated championship points (100 pts per win)
 }
 
 export interface ActivityLog {
@@ -88,3 +89,37 @@ export interface DashboardStats {
   newThisMonth: number;
   upcomingEventsCount: number;
 }
+
+export interface FightBet {
+  id: string; // e.g. "bet-1718293"
+  matchId: string; // e.g. "match-01"
+  fighterId: string; // Member ID e.g. "CFC-1001" or slot 'fighter1' | 'fighter2'
+  fighterName: string; // Name of the fighter bet on
+  betterName: string; // Name of the person placing the bet
+  amount: number; // Bet amount ($ USD or LKR)
+  currency: string; // '$' | 'LKR'
+  timestamp: string; // ISO string
+  note?: string;
+}
+
+export type MatchStatus = 'Live' | 'Upcoming' | 'Finished';
+
+export interface FightMatch {
+  id: string; // e.g. "match-01"
+  title: string; // e.g. "Main Event: Heavyweight World Title"
+  fighter1Id: string; // Member ID of Fighter 1
+  fighter2Id: string; // Member ID of Fighter 2
+  category: string; // e.g. "MMA Championship", "Muay Thai Heavyweight"
+  scheduledDate?: string;
+  scheduledTime?: string;
+  status: MatchStatus;
+  winnerId?: string | null; // Member ID of winner or 'draw' or null
+  bettingEndsAt?: string; // ISO string when 7-min betting window closes
+  bettingDurationMinutes?: number; // e.g. 7
+  isBettingLocked?: boolean; // true when time is up or manually locked
+  houseCommissionRate?: number; // 0.10 (10% house commission)
+  createdAt: string;
+  queueOrder?: number;
+}
+
+

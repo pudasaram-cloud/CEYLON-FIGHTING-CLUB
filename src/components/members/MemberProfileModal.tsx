@@ -213,23 +213,33 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
               <div className="text-[10px] uppercase font-bold text-slate-400">Weight</div>
-              <div className="text-lg font-black text-white mt-0.5">{member.weight} kg</div>
+              <div className="text-base sm:text-lg font-black text-white mt-0.5">{member.weight} kg</div>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
               <div className="text-[10px] uppercase font-bold text-slate-400">Attendance</div>
-              <div className="text-lg font-black text-cyan-400 mt-0.5">
-                {member.attendanceCount || 1} Sessions
+              <div className="text-base sm:text-lg font-black text-cyan-400 mt-0.5">
+                {member.attendanceCount || 1}
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Sparring Record</div>
-              <div className="text-lg font-black text-emerald-400 mt-0.5">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Record</div>
+              <div className="text-base sm:text-lg font-black text-emerald-400 mt-0.5">
                 {member.sparringRecord?.wins || 0}W - {member.sparringRecord?.losses || 0}L
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-black border border-slate-800 text-center shadow-inner">
+              <div className="text-[10px] uppercase font-black text-yellow-400 flex items-center justify-center gap-1">
+                <Trophy className="w-3 h-3 text-yellow-400" />
+                <span>Points</span>
+              </div>
+              <div className="text-base sm:text-lg font-black text-yellow-400 mt-0.5">
+                {member.points !== undefined ? member.points : (member.sparringRecord?.wins || 0) * 100} PTS
               </div>
             </div>
           </div>

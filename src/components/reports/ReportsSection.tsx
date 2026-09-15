@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export const ReportsSection: React.FC = () => {
-  const { members, stats, currentAdmin } = useClub();
+  const { members, stats, currentAdmin, bets, matches } = useClub();
 
   const handlePrint = () => {
     window.print();
@@ -26,6 +26,11 @@ export const ReportsSection: React.FC = () => {
 
   const collectedRevenue = stats.paidMembers * 1500;
   const pendingRevenue = stats.pendingPaymentMembers * 1500;
+
+  // Arena Betting Economics (10% House Commission)
+  const totalBetVolume = bets.reduce((s, b) => s + b.amount, 0);
+  const clubBettingCommission = Math.round(totalBetVolume * 0.10);
+  const winnerPrizePool = totalBetVolume - clubBettingCommission;
 
   // Discipline breakdown
   const disciplineStats = members.reduce((acc, m) => {
@@ -127,10 +132,74 @@ export const ReportsSection: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. Demographic & Membership Metrics */}
+        {/* 2. Arena Match Wagering & 10% Club Commission Audit */}
+        <div>
+          <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 print:text-black mb-3 flex items-center justify-between">
+            <span>2. Live Arena Wagering & 10% Club Rake Economics</span>
+            <span className="text-[10px] text-slate-400 font-normal">
+              7-Min Window · 10% Ceylon FC House Fee · 90% Winner Payout
+            </span>
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            {/* Total Wagering Volume */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 print:border-black print:bg-gray-100">
+              <div className="text-[10px] uppercase font-bold text-slate-400 print:text-black">
+                Total Match Wagering Pool
+              </div>
+              <div className="text-2xl font-black text-white print:text-black mt-1">
+                ${totalBetVolume.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                {bets.length} Wagers across {matches.length} Scheduled Matches
+              </div>
+            </div>
+
+            {/* 10% Club Commission Earned */}
+            <div className="p-4 rounded-2xl bg-yellow-950/30 border border-yellow-500/40 print:border-black print:bg-gray-100">
+              <div className="text-[10px] uppercase font-bold text-yellow-400 print:text-black">
+                10% Club House Commission
+              </div>
+              <div className="text-2xl font-black text-yellow-400 print:text-black mt-1">
+                ${clubBettingCommission.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-yellow-400/90 mt-1">
+                ⚡ Retained Revenue by Ceylon FC
+              </div>
+            </div>
+
+            {/* 90% Distributable Winner Pool */}
+            <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 print:border-black print:bg-gray-100">
+              <div className="text-[10px] uppercase font-bold text-emerald-400 print:text-black">
+                90% Winner Prize Pot
+              </div>
+              <div className="text-2xl font-black text-emerald-400 print:text-black mt-1">
+                ${winnerPrizePool.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-emerald-400 mt-1">
+                ✓ Proportional Payout to Winning Bettors
+              </div>
+            </div>
+
+            {/* Active Match Status */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 print:border-black print:bg-gray-100">
+              <div className="text-[10px] uppercase font-bold text-slate-400 print:text-black">
+                Bout Status
+              </div>
+              <div className="text-xl font-black text-blue-400 print:text-black mt-1">
+                {matches.filter((m) => m.status === 'Live').length} Live
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                {matches.filter((m) => m.status === 'Finished').length} Completed Matches
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Demographic & Membership Metrics */}
         <div>
           <h3 className="text-xs font-black uppercase tracking-wider text-blue-400 print:text-black mb-3">
-            2. Member Demographics & Roster Distribution
+            3. Member Demographics & Roster Distribution
           </h3>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">

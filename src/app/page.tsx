@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useClub } from '@/context/ClubContext';
 import { LoginPage } from '@/components/auth/LoginPage';
-import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { Navbar } from '@/components/layout/Navbar';
+import { MatchArenaHome } from '@/components/arena/MatchArenaHome';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import { MemberManagement } from '@/components/members/MemberManagement';
 import { ActivitiesSection } from '@/components/events/ActivitiesSection';
 import { ReportsSection } from '@/components/reports/ReportsSection';
+import { LeaderboardSection } from '@/components/leaderboard/LeaderboardSection';
 import { SettingsSection } from '@/components/settings/SettingsSection';
 import { MemberRegistrationModal } from '@/components/members/MemberRegistrationModal';
 import { MemberProfileModal } from '@/components/members/MemberProfileModal';
@@ -19,9 +21,28 @@ import { Member } from '@/types';
 export default function Home() {
   const { isAuthenticated } = useClub();
 
-  // Navigation State
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
+  // Navigation State - Defaults to Live Fight Arena Home
+  const [currentTab, setCurrentTab] = useState<string>('arena');
+
+  // Sidebar Layout State
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+
+  // Load saved sidebar state
+  useEffect(() => {
+    const saved = localStorage.getItem('cfc_sidebar_collapsed');
+    if (saved !== null) {
+      setSidebarCollapsed(saved === 'true');
+    }
+  }, []);
+
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('cfc_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   // Modal States
   const [registerModalOpen, setRegisterModalOpen] = useState<boolean>(false);
@@ -52,29 +73,43 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 flex flex-col antialiased">
-      {/* Sidebar Navigation */}
+    <div className="min-h-screen bg-black text-slate-100 flex antialiased">
+      {/* 1. Dedicated Collapsible Left Sidebar */}
       <Sidebar
         currentTab={currentTab}
         onTabChange={setCurrentTab}
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
         onOpenRegister={() => setRegisterModalOpen(true)}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={handleToggleSidebar}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
       />
 
-      {/* Main Content Area (offset by sidebar on desktop) */}
-      <div className="lg:pl-72 flex flex-col flex-1 min-w-0 transition-all">
-        {/* Top Header */}
-        <Header
+      {/* 2. Main Workspace Layout Area (Offset by Sidebar width on desktop) */}
+      <div
+        className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ease-in-out ${
+          sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
+        }`}
+      >
+        {/* Streamlined Top Header */}
+        <Navbar
           currentTab={currentTab}
           onTabChange={setCurrentTab}
           onOpenRegister={() => setRegisterModalOpen(true)}
-          mobileMenuOpen={mobileMenuOpen}
-          setMobileMenuOpen={setMobileMenuOpen}
+          isSidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={handleToggleSidebar}
+          onOpenMobileMenu={() => setMobileMenuOpen(true)}
         />
 
-        {/* Dynamic Tab Body */}
+        {/* Dynamic Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-16">
+          {currentTab === 'arena' && (
+            <MatchArenaHome
+              onOpenRegister={() => setRegisterModalOpen(true)}
+              onViewProfile={handleViewProfile}
+            />
+          )}
+
           {currentTab === 'dashboard' && (
             <DashboardOverview
               onOpenRegister={() => setRegisterModalOpen(true)}
@@ -93,6 +128,14 @@ export default function Home() {
           )}
 
           {currentTab === 'activities' && <ActivitiesSection />}
+
+          {currentTab === 'leaderboard' && (
+            <LeaderboardSection
+              onViewProfile={handleViewProfile}
+              onOpenRegister={() => setRegisterModalOpen(true)}
+              onNavigateArena={() => setCurrentTab('arena')}
+            />
+          )}
 
           {currentTab === 'reports' && <ReportsSection />}
 

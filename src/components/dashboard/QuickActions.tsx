@@ -1,26 +1,32 @@
 'use client';
 
 import React from 'react';
-import { UserPlus, Users, Activity, FileText, ArrowUpRight } from 'lucide-react';
+import { Swords, Trophy, Users, FileText, ArrowUpRight } from 'lucide-react';
 
 interface QuickActionsProps {
-  onOpenRegister: () => void;
+  onOpenRegister?: () => void;
   onNavigateTab: (tab: string) => void;
   onOpenReportModal: () => void;
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
-  onOpenRegister,
   onNavigateTab,
   onOpenReportModal,
 }) => {
   const actions = [
     {
-      title: '+ Register New Member',
-      description: 'Admit new fighter with fixed LKR 1,500 registration fee',
-      icon: UserPlus,
-      iconBg: 'bg-blue-600 text-white shadow-md',
-      onClick: onOpenRegister,
+      title: 'Live Fight Arena',
+      description: 'Enter the live fight match showroom and real-time betting pool',
+      icon: Swords,
+      iconBg: 'bg-gradient-to-br from-red-600 to-rose-600 text-white shadow-md shadow-red-600/30',
+      onClick: () => onNavigateTab('arena'),
+    },
+    {
+      title: 'Leaderboard Circuit',
+      description: 'Official fighter rankings, points standing & champion podium',
+      icon: Trophy,
+      iconBg: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+      onClick: () => onNavigateTab('leaderboard'),
     },
     {
       title: 'View Members',
@@ -30,20 +36,14 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       onClick: () => onNavigateTab('members'),
     },
     {
-      title: 'View Recent Activity',
-      description: 'Audit log of registrations, promotions, and payments',
-      icon: Activity,
-      iconBg: 'bg-blue-600/20 text-blue-400 border border-blue-500/30',
-      onClick: () => onNavigateTab('activities'),
-    },
-    {
-      title: 'Generate Report',
+      title: 'Reports & Revenue',
       description: 'Financial statement & official membership breakdown',
       icon: FileText,
       iconBg: 'bg-blue-600/20 text-blue-400 border border-blue-500/30',
       onClick: onOpenReportModal,
     },
   ];
+
 
   return (
     <div className="space-y-3">

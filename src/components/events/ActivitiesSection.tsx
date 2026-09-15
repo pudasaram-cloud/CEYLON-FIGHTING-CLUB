@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { useClub } from '@/context/ClubContext';
 import { ClubEvent } from '@/types';
-import { RecentActivityFeed } from '@/components/dashboard/RecentActivityFeed';
 import {
   Flame,
   Calendar,
@@ -185,11 +184,6 @@ export const ActivitiesSection: React.FC = () => {
           })}
         </div>
       )}
-
-      {/* Full Audit Activity Feed */}
-      <div className="pt-4">
-        <RecentActivityFeed limit={15} />
-      </div>
 
       {/* Schedule Event Modal */}
       {modalOpen && (

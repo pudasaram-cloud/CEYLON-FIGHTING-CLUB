@@ -1,4 +1,4 @@
-import { Member, ActivityLog, ClubEvent } from '@/types';
+import { Member, ActivityLog, ClubEvent, FightMatch, FightBet } from '@/types';
 
 export const INITIAL_MEMBERS: Member[] = [];
 
@@ -13,3 +13,8 @@ export const INITIAL_ACTIVITIES: ActivityLog[] = [
 ];
 
 export const INITIAL_EVENTS: ClubEvent[] = [];
+
+export const INITIAL_MATCHES: FightMatch[] = [];
+
+export const INITIAL_BETS: FightBet[] = [];
+

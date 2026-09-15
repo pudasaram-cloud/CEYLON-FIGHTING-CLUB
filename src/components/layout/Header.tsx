@@ -58,8 +58,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Desktop active breadcrumb */}
           <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
             <span className="text-slate-200 uppercase font-bold tracking-wider">
+              {currentTab === 'arena' && 'Live Fight Match & Betting Arena'}
               {currentTab === 'dashboard' && 'Dashboard Overview'}
               {currentTab === 'members' && 'Fighter Directory'}
               {currentTab === 'activities' && 'Events & Activity Log'}
@@ -67,6 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
               {currentTab === 'settings' && 'System Configuration'}
             </span>
           </div>
+
         </div>
 
         {/* Right: Notifications & Profile */}

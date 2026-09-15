@@ -147,15 +147,6 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
           </button>
-
-          {/* Button only is Red */}
-          <button
-            onClick={onOpenRegister}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider shadow-md transition-all cursor-pointer"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span> Register Fighter</span>
-          </button>
         </div>
       </div>
 
@@ -330,11 +321,14 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                           size="sm"
                         />
                         <div>
-                          <div className="font-bold text-white group-hover:text-blue-400 transition-colors text-xs sm:text-sm">
-                            {member.fullName}
+                          <div className="font-bold text-white group-hover:text-blue-400 transition-colors text-xs sm:text-sm flex items-center gap-1.5">
+                            <span>{member.fullName}</span>
+                            <span className="px-1.5 py-0.2 rounded bg-black border border-slate-800 text-yellow-400 font-black text-[10px]">
+                              {member.points !== undefined ? member.points : (member.sparringRecord?.wins || 0) * 100} pts
+                            </span>
                           </div>
                           <div className="text-[11px] text-slate-400">
-                            {member.weight} kg
+                            {member.weight} kg · {member.beltRank}
                           </div>
                         </div>
                       </div>

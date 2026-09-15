@@ -8,14 +8,17 @@ import {
   onSnapshot,
   query,
   writeBatch,
+  where,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Member, ActivityLog, ClubEvent } from '@/types';
-import { INITIAL_MEMBERS, INITIAL_ACTIVITIES, INITIAL_EVENTS } from '@/data/initialData';
+import { Member, ActivityLog, ClubEvent, FightMatch, FightBet } from '@/types';
+import { INITIAL_MEMBERS, INITIAL_ACTIVITIES, INITIAL_EVENTS, INITIAL_MATCHES, INITIAL_BETS } from '@/data/initialData';
 
 const MEMBERS_COLLECTION = 'members';
 const ACTIVITIES_COLLECTION = 'activities';
 const EVENTS_COLLECTION = 'events';
+const MATCHES_COLLECTION = 'matches';
+const BETS_COLLECTION = 'bets';
 
 // Deep clean object to remove any undefined fields before writing to Firestore
 function cleanObject<T>(obj: T): T {
@@ -105,6 +108,54 @@ export function subscribeToActivities(callback: (activities: ActivityLog[]) => v
   }
 }
 
+// Real-time listener for Matches
+export function subscribeToMatches(callback: (matches: FightMatch[]) => void) {
+  try {
+    const q = query(collection(db, MATCHES_COLLECTION));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const matchesList: FightMatch[] = [];
+        snapshot.forEach((docSnap) => {
+          matchesList.push(docSnap.data() as FightMatch);
+        });
+        matchesList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        callback(matchesList);
+      },
+      (error) => {
+        console.warn('Firestore matches subscription notice:', error);
+      }
+    );
+  } catch (err) {
+    console.warn('Firestore matches subscription unavailable:', err);
+    return () => {};
+  }
+}
+
+// Real-time listener for Bets
+export function subscribeToBets(callback: (bets: FightBet[]) => void) {
+  try {
+    const q = query(collection(db, BETS_COLLECTION));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const betsList: FightBet[] = [];
+        snapshot.forEach((docSnap) => {
+          betsList.push(docSnap.data() as FightBet);
+        });
+        betsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        callback(betsList);
+      },
+      (error) => {
+        console.warn('Firestore bets subscription notice:', error);
+      }
+    );
+  } catch (err) {
+    console.warn('Firestore bets subscription unavailable:', err);
+    return () => {};
+  }
+}
+
 // Add or Update a Member in Firestore
 export async function saveMemberToFirestore(member: Member): Promise<void> {
   try {
@@ -139,6 +190,78 @@ export async function deleteMemberFromFirestore(id: string): Promise<void> {
     console.log(`[Firestore] Member ${id} successfully deleted.`);
   } catch (err) {
     console.error('[Firestore Error] Failed to delete member:', err);
+    throw err;
+  }
+}
+
+// Add Match to Firestore
+export async function saveMatchToFirestore(match: FightMatch): Promise<void> {
+  try {
+    const cleaned = cleanObject(match);
+    const docRef = doc(db, MATCHES_COLLECTION, match.id);
+    await setDoc(docRef, cleaned, { merge: true });
+    console.log(`[Firestore] Match ${match.id} (${match.title}) saved.`);
+  } catch (err) {
+    console.error('[Firestore Error] Failed to save match:', err);
+    throw err;
+  }
+}
+
+// Update Match in Firestore
+export async function updateMatchInFirestore(id: string, updates: Partial<FightMatch>): Promise<void> {
+  try {
+    const cleaned = cleanObject(updates);
+    const docRef = doc(db, MATCHES_COLLECTION, id);
+    await updateDoc(docRef, cleaned);
+    console.log(`[Firestore] Match ${id} updated.`);
+  } catch (err) {
+    console.error('[Firestore Error] Failed to update match:', err);
+    throw err;
+  }
+}
+
+// Delete Match and its associated Bets from Firestore
+export async function deleteMatchFromFirestore(id: string): Promise<void> {
+  try {
+    const docRef = doc(db, MATCHES_COLLECTION, id);
+    await deleteDoc(docRef);
+
+    // Also delete any bets for this match
+    try {
+      const betsSnap = await getDocs(query(collection(db, BETS_COLLECTION), where('matchId', '==', id)));
+      const batch = writeBatch(db);
+      betsSnap.forEach((bDoc) => batch.delete(bDoc.ref));
+      await batch.commit();
+    } catch {}
+
+    console.log(`[Firestore] Match ${id} deleted.`);
+  } catch (err) {
+    console.error('[Firestore Error] Failed to delete match:', err);
+    throw err;
+  }
+}
+
+// Save Bet to Firestore
+export async function saveBetToFirestore(bet: FightBet): Promise<void> {
+  try {
+    const cleaned = cleanObject(bet);
+    const docRef = doc(db, BETS_COLLECTION, bet.id);
+    await setDoc(docRef, cleaned, { merge: true });
+    console.log(`[Firestore] Bet ${bet.id} by ${bet.betterName} ($${bet.amount}) saved.`);
+  } catch (err) {
+    console.error('[Firestore Error] Failed to save bet:', err);
+    throw err;
+  }
+}
+
+// Delete Bet from Firestore
+export async function deleteBetFromFirestore(id: string): Promise<void> {
+  try {
+    const docRef = doc(db, BETS_COLLECTION, id);
+    await deleteDoc(docRef);
+    console.log(`[Firestore] Bet ${id} deleted.`);
+  } catch (err) {
+    console.error('[Firestore Error] Failed to delete bet:', err);
     throw err;
   }
 }
@@ -183,7 +306,7 @@ export async function saveActivityToFirestore(activity: ActivityLog): Promise<vo
 export async function seedFirestoreIfEmpty(): Promise<void> {
   try {
     const membersSnap = await getDocs(collection(db, MEMBERS_COLLECTION));
-    if (membersSnap.empty) {
+    if (membersSnap.empty && INITIAL_MEMBERS.length > 0) {
       const batch = writeBatch(db);
       for (const m of INITIAL_MEMBERS) {
         batch.set(doc(db, MEMBERS_COLLECTION, m.id), cleanObject(m));
@@ -193,6 +316,12 @@ export async function seedFirestoreIfEmpty(): Promise<void> {
       }
       for (const a of INITIAL_ACTIVITIES) {
         batch.set(doc(db, ACTIVITIES_COLLECTION, a.id), cleanObject(a));
+      }
+      for (const mat of INITIAL_MATCHES) {
+        batch.set(doc(db, MATCHES_COLLECTION, mat.id), cleanObject(mat));
+      }
+      for (const b of INITIAL_BETS) {
+        batch.set(doc(db, BETS_COLLECTION, b.id), cleanObject(b));
       }
       await batch.commit();
       console.log('[Firestore] Seeded initial data.');
@@ -207,15 +336,19 @@ export async function resetFirestoreDatabase(): Promise<void> {
   try {
     const batch = writeBatch(db);
 
-    const [mSnap, eSnap, aSnap] = await Promise.all([
+    const [mSnap, eSnap, aSnap, matSnap, bSnap] = await Promise.all([
       getDocs(collection(db, MEMBERS_COLLECTION)),
       getDocs(collection(db, EVENTS_COLLECTION)),
       getDocs(collection(db, ACTIVITIES_COLLECTION)),
+      getDocs(collection(db, MATCHES_COLLECTION)),
+      getDocs(collection(db, BETS_COLLECTION)),
     ]);
 
     mSnap.forEach((d) => batch.delete(d.ref));
     eSnap.forEach((d) => batch.delete(d.ref));
     aSnap.forEach((d) => batch.delete(d.ref));
+    matSnap.forEach((d) => batch.delete(d.ref));
+    bSnap.forEach((d) => batch.delete(d.ref));
 
     for (const m of INITIAL_MEMBERS) {
       batch.set(doc(db, MEMBERS_COLLECTION, m.id), cleanObject(m));
@@ -225,6 +358,12 @@ export async function resetFirestoreDatabase(): Promise<void> {
     }
     for (const a of INITIAL_ACTIVITIES) {
       batch.set(doc(db, ACTIVITIES_COLLECTION, a.id), cleanObject(a));
+    }
+    for (const mat of INITIAL_MATCHES) {
+      batch.set(doc(db, MATCHES_COLLECTION, mat.id), cleanObject(mat));
+    }
+    for (const b of INITIAL_BETS) {
+      batch.set(doc(db, BETS_COLLECTION, b.id), cleanObject(b));
     }
 
     await batch.commit();
@@ -246,3 +385,4 @@ export async function clearAllMembersFromFirestore(): Promise<void> {
     console.error('[Firestore Error] Failed clearing members:', err);
   }
 }
+
