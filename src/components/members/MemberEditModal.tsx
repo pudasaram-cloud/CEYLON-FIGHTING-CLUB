@@ -22,10 +22,10 @@ export const MemberEditModal: React.FC<MemberEditModalProps> = ({
   const [fullName, setFullName] = useState('');
   const [idNumber, setIdNumber] = useState('');
   const [age, setAge] = useState<number | ''>(24);
+  const [gender, setGender] = useState<Gender>('Male');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [weight, setWeight] = useState<number | ''>(70);
-  const [height, setHeight] = useState<number | ''>(175);
   const [discipline, setDiscipline] = useState<Discipline>('MMA');
   const [skillLevel, setSkillLevel] = useState<SkillLevel>('Intermediate');
   const [beltRank, setBeltRank] = useState('');
@@ -38,10 +38,10 @@ export const MemberEditModal: React.FC<MemberEditModalProps> = ({
       setFullName(member.fullName || '');
       setIdNumber(member.idNumber || '');
       setAge(member.age || 24);
+      setGender(member.gender || 'Male');
       setPhoneNumber(member.phoneNumber || '');
       setEmail(member.email || '');
       setWeight(member.weight || 70);
-      setHeight(member.height || 175);
       setDiscipline(member.discipline || 'MMA');
       setSkillLevel(member.skillLevel || 'Intermediate');
       setBeltRank(member.beltRank || '');
@@ -61,10 +61,10 @@ export const MemberEditModal: React.FC<MemberEditModalProps> = ({
       fullName,
       idNumber,
       age: Number(age) || member.age,
+      gender,
       phoneNumber,
       email,
       weight: Number(weight) || member.weight,
-      height: Number(height) || member.height,
       discipline,
       skillLevel,
       beltRank,
@@ -174,15 +174,32 @@ export const MemberEditModal: React.FC<MemberEditModalProps> = ({
 
             <div>
               <label className="text-xs font-semibold text-slate-300 uppercase block mb-1">
-                Height (cm)
+                Gender
               </label>
-              <input
-                type="number"
-                required
-                value={height}
-                onChange={(e) => setHeight(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm focus:border-blue-500 focus:outline-none"
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGender('Male')}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    gender === 'Male'
+                      ? 'bg-blue-600 border-blue-400 text-white shadow-md'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  👨 Male
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGender('Female')}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    gender === 'Female'
+                      ? 'bg-pink-600 border-pink-400 text-white shadow-md'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  👩 Female
+                </button>
+              </div>
             </div>
 
             <div>

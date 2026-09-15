@@ -39,7 +39,6 @@ export interface Member {
   email?: string;
   address?: string;
   weight: number; // in kg
-  height: number; // in cm
   weightClass: string; // e.g. "Flyweight", "Welterweight"
   discipline: Discipline;
   skillLevel: SkillLevel;

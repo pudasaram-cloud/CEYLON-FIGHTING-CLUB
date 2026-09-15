@@ -88,7 +88,6 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
       'Phone',
       'Email',
       'Weight (kg)',
-      'Height (cm)',
       'Division',
       'Discipline',
       'Belt/Rank',
@@ -106,7 +105,6 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
       m.phoneNumber,
       m.email || '',
       m.weight,
-      m.height,
       `"${m.weightClass}"`,
       m.discipline,
       `"${m.beltRank}"`,
@@ -336,7 +334,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                             {member.fullName}
                           </div>
                           <div className="text-[11px] text-slate-400">
-                            {member.weight} kg · {member.height} cm
+                            {member.weight} kg
                           </div>
                         </div>
                       </div>

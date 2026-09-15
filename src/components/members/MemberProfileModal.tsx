@@ -213,15 +213,10 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
               <div className="text-[10px] uppercase font-bold text-slate-400">Weight</div>
               <div className="text-lg font-black text-white mt-0.5">{member.weight} kg</div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Height</div>
-              <div className="text-lg font-black text-white mt-0.5">{member.height} cm</div>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-center">

@@ -209,8 +209,8 @@ export const FighterAccessCard: React.FC<FighterAccessCardProps> = ({ member }) 
                     <span className="text-white font-bold truncate block">{member.weightClass.split(' ')[0]}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 uppercase block font-bold text-[8px]">WEIGHT / HEIGHT</span>
-                    <span className="text-white font-bold block">{member.weight}kg · {member.height}cm</span>
+                    <span className="text-slate-500 uppercase block font-bold text-[8px]">WEIGHT / GENDER</span>
+                    <span className="text-white font-bold block">{member.weight}kg · {member.gender}</span>
                   </div>
                 </div>
               </div>
@@ -319,8 +319,8 @@ export const FighterAccessCard: React.FC<FighterAccessCardProps> = ({ member }) 
                 <span className="text-white font-bold text-xs truncate block">{member.weightClass}</span>
               </div>
               <div>
-                <span className="text-[8px] uppercase font-bold text-slate-500 block">WEIGHT & HEIGHT</span>
-                <span className="text-white font-semibold text-xs block">{member.weight} kg · {member.height} cm</span>
+                <span className="text-[8px] uppercase font-bold text-slate-500 block">WEIGHT & GENDER</span>
+                <span className="text-white font-semibold text-xs block">{member.weight} kg · {member.gender}</span>
               </div>
               <div>
                 <span className="text-[8px] uppercase font-bold text-slate-500 block">FEE STATUS</span>

@@ -40,7 +40,7 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
   const { registerMember } = useClub();
 
   // Core Form Fields:
-  // Full Name, Citizen ID (alphanumeric letters & numbers), age, phone number, weight, height, payment status, avatar
+  // Full Name, Citizen ID (alphanumeric letters & numbers), age, phone number, weight, payment status, avatar
   const [fullName, setFullName] = useState('');
   const [idNumber, setIdNumber] = useState('');
   const [age, setAge] = useState<number | ''>(24);
@@ -50,7 +50,6 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
   const [address, setAddress] = useState('Colombo, Sri Lanka');
 
   const [weight, setWeight] = useState<number | ''>(70);
-  const [height, setHeight] = useState<number | ''>(175);
   const [discipline, setDiscipline] = useState<Discipline>('MMA');
   const [skillLevel, setSkillLevel] = useState<SkillLevel>('Intermediate');
   const [beltRank, setBeltRank] = useState('Blue Belt');
@@ -112,7 +111,6 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
       phoneNumber,
       address,
       weight: Number(weight) || 70,
-      height: Number(height) || 175,
       discipline,
       skillLevel,
       beltRank,
@@ -460,14 +458,14 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
             </div>
           </div>
 
-          {/* Section 3: Physical & Combat Attributes (Weight, Height, Weight Class) */}
+          {/* Section 3: Physical & Combat Attributes (Weight, Weight Class) */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-3 flex items-center gap-1.5">
               <Flame className="w-4 h-4" />
-              2. Weight, Height & Combat Classification
+              2. Weight & Combat Classification
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Weight (kg) */}
               <div>
                 <label className="text-xs font-semibold text-slate-300 uppercase block mb-1">
@@ -487,28 +485,6 @@ export const MemberRegistrationModal: React.FC<MemberRegistrationModalProps> = (
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-slate-500 font-semibold">
                     kg
-                  </span>
-                </div>
-              </div>
-
-              {/* Height (cm) */}
-              <div>
-                <label className="text-xs font-semibold text-slate-300 uppercase block mb-1">
-                  Height (cm) *
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    required
-                    min={130}
-                    max={220}
-                    value={height}
-                    onChange={(e) => setHeight(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="175"
-                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm focus:border-blue-500 focus:outline-none pr-10"
-                  />
-                  <span className="absolute right-3 top-2.5 text-xs text-slate-500 font-semibold">
-                    cm
                   </span>
                 </div>
               </div>
